@@ -1,0 +1,196 @@
+@import "tailwindcss";
+@import "aos/dist/aos.css";
+@import "swiper/css";
+@import "swiper/css/navigation";
+@import "swiper/css/pagination";
+@import "swiper/css/effect-coverflow";
+
+@theme {
+  --color-primary: #093624;
+  --color-primary-dark: #052216;
+  --color-primary-light: #0d4a32;
+  --color-secondary: #F9F295;
+  --color-secondary-hover: #fae968;
+  --color-brand-black: #141414;
+  --color-brand-body: #6D6868;
+  --color-brand-gray: #F1EFEE;
+  --color-brand-border: #E8E5E3;
+
+  --font-sans: "Satoshi", "Satoshi-Medium", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-satoshi: "Satoshi", "Satoshi-Regular", sans-serif;
+  --font-satoshi-med: "Satoshi", "Satoshi-Medium", sans-serif;
+  --font-satoshi-bold: "Satoshi", "Satoshi-Bold", sans-serif;
+}
+
+/* Unified Satoshi Family */
+@font-face {
+  font-family: "Satoshi";
+  src: url("/assets/fonts/Satoshi-Light.woff") format("woff");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Satoshi";
+  src: url("/assets/fonts/Satoshi-Regular.woff2") format("woff2"),
+       url("/assets/fonts/Satoshi-Regular.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Satoshi";
+  src: url("/assets/fonts/Satoshi-Medium.woff2") format("woff2"),
+       url("/assets/fonts/Satoshi-Medium.woff") format("woff");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Satoshi";
+  src: url("/assets/fonts/Satoshi-Bold.woff2") format("woff2"),
+       url("/assets/fonts/Satoshi-Bold.woff") format("woff");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Specific Face Aliases to match reference template classes exactly */
+@font-face {
+  font-family: "Satoshi-Light";
+  src: url("/assets/fonts/Satoshi-Light.woff") format("woff");
+  font-display: swap;
+  font-weight: 300;
+}
+
+@font-face {
+  font-family: "Satoshi-Regular";
+  src: url("/assets/fonts/Satoshi-Regular.woff2") format("woff2"),
+       url("/assets/fonts/Satoshi-Regular.woff") format("woff");
+  font-display: swap;
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: "Satoshi-Medium";
+  src: url("/assets/fonts/Satoshi-Medium.woff2") format("woff2"),
+       url("/assets/fonts/Satoshi-Medium.woff") format("woff");
+  font-display: swap;
+  font-weight: 500;
+}
+
+@font-face {
+  font-family: "Satoshi-Bold";
+  src: url("/assets/fonts/Satoshi-Bold.woff2") format("woff2"),
+       url("/assets/fonts/Satoshi-Bold.woff") format("woff");
+  font-display: swap;
+  font-weight: 700;
+}
+
+:root {
+  --color-primary: #093624;
+  --color-primary-dark: #052216;
+  --color-primary-light: #0d4a32;
+  --color-secondary: #F9F295;
+  --color-secondary-hover: #fae968;
+  --color-black: #141414;
+  --color-body: #6D6868;
+  --color-gray-bg: #F1EFEE;
+  --color-border: #E8E5E3;
+}
+
+body {
+  font-family: "Satoshi", "Satoshi-Medium", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--color-black);
+  background-color: #ffffff;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Satoshi", "Satoshi-Bold", sans-serif;
+  color: var(--color-black);
+}
+
+.font-satoshi {
+  font-family: "Satoshi", "Satoshi-Regular", sans-serif;
+}
+
+.font-satoshi-med {
+  font-family: "Satoshi", "Satoshi-Medium", sans-serif;
+  font-weight: 500;
+}
+
+.font-satoshi-bold {
+  font-family: "Satoshi", "Satoshi-Bold", sans-serif;
+  font-weight: 700;
+}
+
+.font-onest {
+  font-family: "Onest", sans-serif;
+}
+
+.font-caslon {
+  font-family: "Libre Caslon Display", serif;
+}
+
+/* Marquee infinite continuous scroll */
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 30s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Hide scrollbars but keep functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom transitions */
+.transition-luxury {
+  transition: all 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Subtle image zoom container */
+.img-zoom-hover {
+  overflow: hidden;
+}
+
+.img-zoom-hover img {
+  transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.img-zoom-hover:hover img {
+  transform: scale(1.05);
+}
+
+/* Swiper 3D Coverflow Smoothness */
+.swiper-coverflow {
+  perspective: 1200px;
+}
+.swiper-coverflow .swiper-slide {
+  transform-style: preserve-3d;
+  will-change: transform;
+  transition-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+}
+

@@ -1,0 +1,6 @@
+{
+  "name": "Reshans - Modern Fashion & Apparel Store",
+  "description": "Reshans luxury fashion and apparel ecommerce storefront with trending products, exclusive collections, and new arrivals.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

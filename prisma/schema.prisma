@@ -1,0 +1,229 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+}
+
+model User {
+  id        String    @id @default(uuid())
+  name      String
+  email     String    @unique
+  password  String
+  role      Role      @default(CUSTOMER)
+  phone     String?
+  avatar    String?   @db.Text
+  city      String?   @default("Dhaka")
+  status    String    @default("Active") // Active, Blocked
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  orders    Order[]
+  reviews   Review[]
+  addresses Address[]
+
+  @@map("users")
+}
+
+model Address {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title      String   @default("Home") // Home, Office
+  name       String
+  street     String   @db.Text
+  city       String   @default("Dhaka")
+  postalCode String?
+  phone      String
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("addresses")
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String
+  slug        String    @unique
+  image       String    @db.Text
+  description String?   @db.Text
+  status      String    @default("Active") // Active, Hidden
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  products    Product[]
+
+  @@map("categories")
+}
+
+model Brand {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  origin    String?   @default("Dhaka, Bangladesh")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  products  Product[]
+
+  @@map("brands")
+}
+
+model Product {
+  id            String      @id @default(uuid())
+  name          String
+  sku           String?     @unique
+  description   String      @db.Text
+  price         Float
+  originalPrice Float?
+  discount      String?
+  badge         String?     // new, hot, sale
+  rating        Float       @default(5.0)
+  reviewsCount  Int         @default(0)
+  frontImage    String      @db.Text
+  backImage     String?     @db.Text
+  inStock       Boolean     @default(true)
+  stockCount    Int         @default(20)
+  isTrending    Boolean     @default(false)
+  isNewArrival  Boolean     @default(false)
+  isBestSeller  Boolean     @default(false)
+  tabCategory   String?     // new, featured, top_sellers
+  department    String?     @default("men") // men, women, kids, all
+  sizes         String      @default("S,M,L,XL") // comma-separated sizes
+  colors        String      @default("Forest Green:#093624,Butter Cream:#F9F295") // JSON or key:hex string
+
+  categoryId    String?
+  category      Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  brandId       String?
+  brand         Brand?      @relation(fields: [brandId], references: [id], onDelete: SetNull)
+
+  orderItems    OrderItem[]
+  reviews       Review[]
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@map("products")
+}
+
+model Order {
+  id              String        @id @default(uuid())
+  orderNumber     String        @unique
+  userId          String?
+  user            User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  customerName    String
+  customerEmail   String
+  customerPhone   String
+  customerAddress String        @db.Text
+  total           Float
+  subtotal        Float
+  deliveryFee     Float         @default(60.0)
+  paymentMethod   String        @default("Cash on Delivery") // bKash, Nagad, Cash on Delivery, Credit / Debit Card
+  paymentStatus   PaymentStatus @default(PENDING)
+  orderStatus     OrderStatus   @default(PENDING)
+  trackingNumber  String?
+  note            String?       @db.Text
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  items           OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id            String   @id @default(uuid())
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId     String?
+  product       Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productName   String
+  productImage  String   @db.Text
+  quantity      Int      @default(1)
+  selectedColor String?
+  selectedSize  String?
+  price         Float
+  createdAt     DateTime @default(now())
+
+  @@map("order_items")
+}
+
+model Coupon {
+  id            String    @id @default(uuid())
+  code          String    @unique
+  discountType  String    @default("percentage") // percentage, fixed
+  discountValue Float
+  minSpend      Float     @default(0.0)
+  expiryDate    DateTime?
+  usageLimit    Int       @default(100)
+  usageCount    Int       @default(0)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("coupons")
+}
+
+model Review {
+  id             String   @id @default(uuid())
+  productId      String
+  product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  customerName   String
+  customerAvatar String?  @db.Text
+  rating         Int      @default(5)
+  comment        String   @db.Text
+  isVerified     Boolean  @default(true)
+  status         String   @default("approved") // approved, pending, rejected
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("reviews")
+}
+
+model Banner {
+  id         String   @id @default(uuid())
+  type       String   @default("hero") // hero, dual, marquee
+  title      String
+  subtitle   String?  @db.Text
+  buttonText String?
+  link       String?
+  imageUrl   String?  @db.Text
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("banners")
+}
+
+model Setting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
