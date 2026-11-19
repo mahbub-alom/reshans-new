@@ -71,9 +71,7 @@ export const ShopgramSection: React.FC = () => {
         <h3 className="text-xl sm:text-2xl font-bold text-[#141414] font-satoshi-bold">
           @Reshans_Fashion on Instagram
         </h3>
-        <p className="text-xs text-[#7A7A7A] mt-1 font-satoshi">
-          Click & drag left or right to explore customer styling across Bangladesh
-        </p>
+     
       </div>
 
       {/* Full-width continuous image gallery: Natural top-bottom scroll maintained, horizontal scroll via mouse drag */}

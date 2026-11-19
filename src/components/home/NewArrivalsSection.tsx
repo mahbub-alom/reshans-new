@@ -130,7 +130,7 @@ export const NewArrivalsSection: React.FC = () => {
       {/* Narrower container matching reference website proportions */}
       <div className="max-w-[1180px] mx-auto px-4 sm:px-6">
         {/* Split Layout: flush zero-gap row */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 shadow-sm border border-[#E8E5E3] rounded-xs overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
           {/* Left Column: Synchronized Outfit Swiper (5 cols on desktop, hidden on small screens) */}
           <div className="lg:col-span-5 hidden lg:block bg-[#f1f0ee] relative overflow-hidden h-[620px]">
             <Swiper
@@ -152,10 +152,10 @@ export const NewArrivalsSection: React.FC = () => {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
                     <div className="absolute bottom-6 left-6 right-6 text-white z-10 pointer-events-none">
-                      <span className="text-[#F9F295] text-xs font-bold uppercase tracking-widest font-satoshi-bold block mb-1">
+                      {/* <span className="text-[#F9F295] text-xs font-bold uppercase tracking-widest font-satoshi-bold block mb-1">
                         Look {set.id}
-                      </span>
-                      <h4 className="text-xl font-bold font-satoshi-bold drop-shadow-xs">
+                      </span> */}
+                      <h4 className="text-xl text-white! font-bold font-satoshi-bold drop-shadow-xs">
                         {set.lookbookTitle}
                       </h4>
                     </div>

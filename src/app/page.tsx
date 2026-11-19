@@ -213,7 +213,7 @@ export default function HomePage() {
             <NewArrivalsSection />
 
             {/* 8. Trust Features Bar (Free Shipping, Returns, Security, Support) */}
-            <FeaturesSection />
+            {/* <FeaturesSection /> */}
 
             {/* 9. Customer Testimonials & Reviews Carousel */}
             <TestimonialSection />

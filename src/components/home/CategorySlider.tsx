@@ -112,7 +112,7 @@ export const CategorySlider: React.FC = () => {
 
                 {/* Content at Bottom matching .aqf-category-2-content: title + blur button */}
                 <div className="absolute inset-x-0 bottom-0 p-8 sm:p-12 flex flex-col items-center justify-end text-center z-10">
-                  <h4 className="text-2xl sm:text-[38px] font-bold text-white font-satoshi-bold mb-4 drop-shadow-sm leading-tight">
+                  <h4 className="text-2xl sm:text-[38px] font-bold text-white! font-satoshi-bold mb-4 drop-shadow-sm leading-tight">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
