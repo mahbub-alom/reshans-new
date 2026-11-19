@@ -81,14 +81,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, showCategory 
           <Heart size={16} className={inWishlist ? 'fill-[#F9F295]' : ''} />
         </button>
 
-        {/* Front & Back Image Swap on Hover */}
-        <div className="w-full h-full cursor-pointer">
+        {/* Front & Back Image Swap on Hover with Smooth Zoom */}
+        <div className="relative w-full h-full overflow-hidden cursor-pointer">
           <img
             key={resolvedFrontImage}
             src={resolvedFrontImage}
             alt={`${product.name} - ${selectedColor}`}
-            className={`w-full h-full object-cover object-top transition-opacity duration-500 ${
-              isHovered && product.backImage ? 'opacity-0' : 'opacity-100'
+            className={`w-full h-full object-cover object-top transition-all duration-700 ease-out ${
+              isHovered && product.backImage
+                ? 'opacity-0 scale-100 pointer-events-none'
+                : 'opacity-100 scale-100'
             }`}
             loading="lazy"
           />
@@ -96,8 +98,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, showCategory 
             <img
               src={product.backImage}
               alt={`${product.name} back view`}
-              className={`absolute inset-0 w-full h-full object-cover object-top transition-opacity duration-500 ${
-                isHovered ? 'opacity-100' : 'opacity-0'
+              className={`absolute inset-0 w-full h-full object-cover object-top transition-all duration-700 ease-out ${
+                isHovered
+                  ? 'opacity-100 scale-108'
+                  : 'opacity-0 scale-100 pointer-events-none'
               }`}
               loading="lazy"
             />

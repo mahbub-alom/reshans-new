@@ -14,6 +14,7 @@ export const WishlistDrawer: React.FC = () => {
     formatPrice,
     openCart,
     products,
+    navigate,
   } = useShop();
 
   const sourceProducts = products && products.length ? products : PRODUCTS;
@@ -100,11 +101,17 @@ export const WishlistDrawer: React.FC = () => {
                   className="flex gap-4 p-3.5 bg-gray-50/80 rounded-xs border border-gray-100 relative group transition-colors hover:bg-gray-50"
                 >
                   {/* Thumbnail */}
-                  <div className="w-20 h-24 rounded-xs overflow-hidden bg-white shrink-0 border border-gray-200">
+                  <div
+                    onClick={() => {
+                      closeWishlist();
+                      navigate(`/product/${product.id}`);
+                    }}
+                    className="w-20 h-24 rounded-xs overflow-hidden bg-white shrink-0 border border-gray-200 cursor-pointer"
+                  >
                     <img
                       src={product.frontImage}
                       alt={product.name}
-                      className="w-full h-full object-cover object-top"
+                      className="w-full h-full object-cover object-top hover:scale-105 transition-transform duration-300"
                     />
                   </div>
 
@@ -116,7 +123,13 @@ export const WishlistDrawer: React.FC = () => {
                           <span className="text-[10px] uppercase font-bold text-[#093624] tracking-wider font-satoshi-bold">
                             {product.category}
                           </span>
-                          <h4 className="text-xs sm:text-sm font-semibold text-[#141414] line-clamp-1 font-satoshi-bold mt-0.5">
+                          <h4
+                            onClick={() => {
+                              closeWishlist();
+                              navigate(`/product/${product.id}`);
+                            }}
+                            className="text-xs sm:text-sm font-semibold text-[#141414] line-clamp-1 font-satoshi-bold mt-0.5 cursor-pointer hover:text-[#093624]"
+                          >
                             {product.name}
                           </h4>
                         </div>

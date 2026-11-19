@@ -32,14 +32,6 @@ const COLOR_OPTIONS = [
 
 const SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
-const BRAND_OPTIONS = [
-  { id: 'reshans-atelier', name: 'Reshans Atelier', count: 12 },
-  { id: 'reshans-casual', name: 'Reshans Casual', count: 9 },
-  { id: 'urban-minimal', name: 'Urban Minimalist', count: 7 },
-  { id: 'heritage-knit', name: 'Heritage Knitwear', count: 6 },
-  { id: 'dhaka-couture', name: 'Dhaka Couture', count: 4 },
-];
-
 export const ShopPage: React.FC = () => {
   const { products, navigate, formatPrice, activeCategoryFilter, setActiveCategoryFilter } = useShop();
 
@@ -49,7 +41,6 @@ export const ShopPage: React.FC = () => {
   const [priceRange, setPriceRange] = useState<number>(10000);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
-  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'default' | 'price-asc' | 'price-desc' | 'rating' | 'newest'>('default');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -112,20 +103,12 @@ export const ShopPage: React.FC = () => {
     setCurrentPage(1);
   };
 
-  const toggleBrand = (brandName: string) => {
-    setSelectedBrands((prev) =>
-      prev.includes(brandName) ? prev.filter((b) => b !== brandName) : [...prev, brandName]
-    );
-    setCurrentPage(1);
-  };
-
   const resetAllFilters = () => {
     setSelectedCategory('all');
     setSelectedAvailability([]);
     setPriceRange(10000);
     setSelectedSizes([]);
     setSelectedColors([]);
-    setSelectedBrands([]);
     setSearchQuery('');
     setSortBy('default');
     setCurrentPage(1);
@@ -137,7 +120,6 @@ export const ShopPage: React.FC = () => {
     (priceRange < 10000 ? 1 : 0) +
     selectedSizes.length +
     selectedColors.length +
-    selectedBrands.length +
     (searchQuery.trim() ? 1 : 0);
 
   // Filter & Sort Products
@@ -219,7 +201,6 @@ export const ShopPage: React.FC = () => {
     priceRange,
     selectedSizes,
     selectedColors,
-    selectedBrands,
     searchQuery,
     sortBy,
   ]);
@@ -301,8 +282,8 @@ export const ShopPage: React.FC = () => {
       {/* 3. Top Filter Bar & Interactive Dropdowns (6 Columns) */}
       <section className="py-8 bg-white" ref={dropdownRef}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Top 6 Horizontal Filter Buttons */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pb-6 border-b border-gray-100">
+          {/* Top 5 Horizontal Filter Buttons */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pb-6 border-b border-gray-100">
             {/* 1. Category Dropdown */}
             <div className="relative">
               <button
@@ -572,56 +553,6 @@ export const ShopPage: React.FC = () => {
                         </button>
                       );
                     })}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 6. Brand Dropdown */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => toggleDropdown('brand')}
-                className={`w-full py-2.5 px-3.5 rounded-sm border text-xs sm:text-sm font-satoshi-med flex items-center justify-between transition-all cursor-pointer ${
-                  openDropdown === 'brand' || selectedBrands.length > 0
-                    ? 'border-[#093624] text-[#093624] bg-[#093624]/5'
-                    : 'border-gray-200 text-[#141414] hover:border-gray-300'
-                }`}
-              >
-                <span className="truncate">
-                  {selectedBrands.length > 0 ? `Brand (${selectedBrands.length})` : 'Brand'}
-                </span>
-                <ChevronDown
-                  size={14}
-                  className={`transition-transform duration-200 ${
-                    openDropdown === 'brand' ? 'rotate-180' : ''
-                  }`}
-                />
-              </button>
-
-              {openDropdown === 'brand' && (
-                <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-md shadow-xl border border-gray-100 p-3 z-30 animate-in fade-in slide-in-from-top-1 duration-150">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2 pb-1 border-b">
-                    Brand Label
-                  </h4>
-                  <div className="space-y-1.5 text-xs font-satoshi-med">
-                    {BRAND_OPTIONS.map((b) => (
-                      <label
-                        key={b.id}
-                        className="flex items-center justify-between py-1 px-1 rounded-xs hover:bg-gray-50 cursor-pointer text-gray-700"
-                      >
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={selectedBrands.includes(b.name)}
-                            onChange={() => toggleBrand(b.name)}
-                            className="rounded text-[#093624] focus:ring-[#093624] cursor-pointer"
-                          />
-                          <span>{b.name}</span>
-                        </div>
-                        <span className="text-[11px] text-gray-400">({b.count})</span>
-                      </label>
-                    ))}
                   </div>
                 </div>
               )}

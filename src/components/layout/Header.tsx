@@ -65,10 +65,10 @@ export const Header: React.FC = () => {
               href="/shop"
               onClick={(e) => {
                 e.preventDefault();
-                navigateToCategory('all');
+                navigate('/shop');
               }}
               className={`text-[15px] transition-colors cursor-pointer py-1 ${
-                currentPath === '/shop' && (!activeCategoryFilter || activeCategoryFilter === 'all')
+                currentPath === '/shop'
                   ? 'text-[#093624] font-black'
                   : 'text-[#141414] hover:text-[#093624]'
               }`}
@@ -78,13 +78,13 @@ export const Header: React.FC = () => {
 
             {/* 2. Men */}
             <Link
-              href="/shop"
+              href="/men"
               onClick={(e) => {
                 e.preventDefault();
-                navigateToCategory('Men Collection');
+                navigate('/men');
               }}
               className={`text-[15px] transition-colors cursor-pointer py-1 ${
-                activeCategoryFilter === 'Men Collection'
+                currentPath === '/men'
                   ? 'text-[#093624] font-black'
                   : 'text-[#141414] hover:text-[#093624]'
               }`}
@@ -94,13 +94,13 @@ export const Header: React.FC = () => {
 
             {/* 3. Women */}
             <Link
-              href="/shop"
+              href="/women"
               onClick={(e) => {
                 e.preventDefault();
-                navigateToCategory('Women Collection');
+                navigate('/women');
               }}
               className={`text-[15px] transition-colors cursor-pointer py-1 ${
-                activeCategoryFilter === 'Women Collection' || activeCategoryFilter === 'Casual Wear'
+                currentPath === '/women'
                   ? 'text-[#093624] font-black'
                   : 'text-[#141414] hover:text-[#093624]'
               }`}
@@ -109,14 +109,14 @@ export const Header: React.FC = () => {
             </Link>
 
             {/* 4. New Arrivals */}
-            <Link
-              href="/shop"
+            {/* <Link
+              href="/new-arrivals"
               onClick={(e) => {
                 e.preventDefault();
-                navigateToCategory('new');
+                navigate('/new-arrivals');
               }}
               className={`text-[15px] transition-colors cursor-pointer py-1 flex items-center gap-1.5 ${
-                activeCategoryFilter === 'new'
+                currentPath === '/new-arrivals'
                   ? 'text-[#093624] font-black'
                   : 'text-[#141414] hover:text-[#093624]'
               }`}
@@ -125,23 +125,24 @@ export const Header: React.FC = () => {
               <span className="text-[9px] font-bold uppercase tracking-wider bg-[#093624] text-[#F9F295] px-1.5 py-0.5 rounded-2xs font-satoshi-bold">
                 New
               </span>
-            </Link>
+            </Link> */}
 
-            {/* 5. Collections (Minimal dropdown) */}
+            {/* 5. Collections (Dedicated page with minimal dropdown preview) */}
             <div
               className="relative py-2 group"
               onMouseEnter={() => setActiveDropdown('collections')}
               onMouseLeave={() => setActiveDropdown(null)}
             >
-              <button
-                onClick={() => {
-                  navigateToCategory('all');
+              <Link
+                href="/collections"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate('/collections');
                   setActiveDropdown(null);
                 }}
                 className={`flex items-center gap-1.5 text-[15px] transition-colors cursor-pointer ${
-                  activeDropdown === 'collections' ||
-                  ['Workleisure', 'Smart Casual', 'Streetwear', 'Knitwear'].includes(activeCategoryFilter)
-                    ? 'text-[#093624]'
+                  currentPath === '/collections' || activeDropdown === 'collections'
+                    ? 'text-[#093624] font-black'
                     : 'text-[#141414] hover:text-[#093624]'
                 }`}
               >
@@ -152,7 +153,7 @@ export const Header: React.FC = () => {
                     activeDropdown === 'collections' ? 'rotate-180 text-[#093624]' : ''
                   }`}
                 />
-              </button>
+              </Link>
 
               {/* Smooth Minimal Collections Dropdown Menu */}
               <div
@@ -165,39 +166,48 @@ export const Header: React.FC = () => {
                 <div className="w-56 bg-white shadow-xl rounded-xs py-2 border border-gray-100 ring-1 ring-black/5">
                   <button
                     onClick={() => {
-                      navigateToCategory('Workleisure');
+                      navigate('/collections');
                       setActiveDropdown(null);
                     }}
-                    className="w-full text-left block px-4 py-2.5 text-xs font-satoshi-med text-[#141414] hover:bg-[#093624]/5 hover:text-[#093624] transition-colors cursor-pointer"
+                    className="w-full text-left block px-4 py-2.5 text-xs font-satoshi-bold text-[#093624] hover:bg-[#093624]/5 border-b border-gray-100 transition-colors cursor-pointer"
                   >
-                    Summer Casuals 2026
+                    View All Collections →
                   </button>
                   <button
                     onClick={() => {
-                      navigateToCategory('Smart Casual');
+                      navigate('/collections');
                       setActiveDropdown(null);
                     }}
                     className="w-full text-left block px-4 py-2.5 text-xs font-satoshi-med text-[#141414] hover:bg-[#093624]/5 hover:text-[#093624] transition-colors cursor-pointer"
                   >
-                    Executive Formal Wear
+                    Summer Series 2026
                   </button>
                   <button
                     onClick={() => {
-                      navigateToCategory('Streetwear');
+                      navigate('/collections');
                       setActiveDropdown(null);
                     }}
                     className="w-full text-left block px-4 py-2.5 text-xs font-satoshi-med text-[#141414] hover:bg-[#093624]/5 hover:text-[#093624] transition-colors cursor-pointer"
                   >
-                    Urban Streetwear Essentials
+                    Office & Workleisure
                   </button>
                   <button
                     onClick={() => {
-                      navigateToCategory('Knitwear');
+                      navigate('/collections');
                       setActiveDropdown(null);
                     }}
                     className="w-full text-left block px-4 py-2.5 text-xs font-satoshi-med text-[#141414] hover:bg-[#093624]/5 hover:text-[#093624] transition-colors cursor-pointer"
                   >
-                    Exclusive Dhaka Editions
+                    Winter & Alpaca Knits
+                  </button>
+                  <button
+                    onClick={() => {
+                      navigate('/collections');
+                      setActiveDropdown(null);
+                    }}
+                    className="w-full text-left block px-4 py-2.5 text-xs font-satoshi-med text-[#141414] hover:bg-[#093624]/5 hover:text-[#093624] transition-colors cursor-pointer"
+                  >
+                    Premium Atelier Editions
                   </button>
                 </div>
               </div>
@@ -205,14 +215,14 @@ export const Header: React.FC = () => {
 
             {/* 6. Sale */}
             <Link
-              href="/shop"
+              href="/sale"
               onClick={(e) => {
                 e.preventDefault();
-                navigateToCategory('sale');
+                navigate('/sale');
               }}
               className={`text-[15px] font-bold transition-colors cursor-pointer py-1 flex items-center gap-1.5 ${
-                activeCategoryFilter === 'sale'
-                  ? 'text-red-700'
+                currentPath === '/sale'
+                  ? 'text-red-700 underline underline-offset-4'
                   : 'text-red-600 hover:text-red-700'
               }`}
             >

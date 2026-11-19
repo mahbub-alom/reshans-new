@@ -43,12 +43,17 @@ export const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({ productI
   } = useShop();
 
   // Find product by ID or Slug or fallback to first product
+  const cleanId = productId ? decodeURIComponent(productId).trim() : '';
   const product =
     products.find((p) => {
-      if (p.id === productId) return true;
-      if (p.slug && p.slug === productId) return true;
-      // Match hyphenated slug generated from name or ID
-      if (productId && (productId.endsWith(`-${p.id}`) || productId.includes(p.id))) return true;
+      if (!cleanId) return false;
+      if (p.id.toLowerCase() === cleanId.toLowerCase()) return true;
+      if (p.slug && p.slug.toLowerCase() === cleanId.toLowerCase()) return true;
+      // Exact match with trailing -prod-X or -prodX
+      if (cleanId.endsWith(`-${p.id.toLowerCase()}`)) return true;
+      if (cleanId.split('-').pop() === p.id.toLowerCase()) return true;
+      // Also match if slug begins or ends with product ID
+      if (cleanId.includes(p.id.toLowerCase())) return true;
       return false;
     }) || products[0] || PRODUCTS[0];
 

@@ -250,7 +250,26 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [orders]);
 
-  const [wishlist, setWishlist] = useState<string[]>(['prod-2', 'prod-5']);
+  const [wishlist, setWishlist] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('reshans_wishlist_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {
+      // ignore
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('reshans_wishlist_v1', JSON.stringify(wishlist));
+    } catch {
+      // ignore
+    }
+  }, [wishlist]);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
@@ -339,18 +358,20 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const shouldOpenDrawer = options?.openDrawer !== undefined ? options.openDrawer : true;
 
     setCart((prev) => {
+      // Find item with same product ID regardless of minor case differences
       const existingIndex = prev.findIndex(
-        (item) =>
-          item.product.id === product.id &&
-          (item.selectedColor || 'Default') === resolvedColor &&
-          (item.selectedSize || 'M') === resolvedSize
+        (item) => item.product.id === product.id
       );
 
       if (existingIndex > -1) {
+        // Same product is already in cart -> only increment quantity
         const next = [...prev];
         next[existingIndex] = {
           ...next[existingIndex],
           quantity: next[existingIndex].quantity + quantity,
+          // Update selected color/size if provided
+          selectedColor: selectedColor || next[existingIndex].selectedColor || resolvedColor,
+          selectedSize: selectedSize || next[existingIndex].selectedSize || resolvedSize,
         };
         return next;
       } else {

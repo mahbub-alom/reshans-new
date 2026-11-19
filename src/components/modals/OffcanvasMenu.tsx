@@ -99,12 +99,10 @@ export const OffcanvasMenu: React.FC = () => {
                 href="/shop"
                 onClick={(e) => {
                   e.preventDefault();
-                  navigateToCategory('all');
+                  navigate('/shop');
                   closeOffcanvas();
                 }}
-                className={`block text-sm font-bold transition-colors cursor-pointer ${
-                  activeCategoryFilter === 'all' ? 'text-[#093624]' : 'text-[#141414] hover:text-[#093624]'
-                }`}
+                className="block text-sm font-bold text-[#141414] hover:text-[#093624] transition-colors cursor-pointer"
               >
                 Shop
               </Link>
@@ -113,15 +111,13 @@ export const OffcanvasMenu: React.FC = () => {
             {/* 2. Men */}
             <div className="border-b border-gray-100 py-2.5">
               <Link
-                href="/shop"
+                href="/men"
                 onClick={(e) => {
                   e.preventDefault();
-                  navigateToCategory('Men Collection');
+                  navigate('/men');
                   closeOffcanvas();
                 }}
-                className={`block text-sm font-bold transition-colors cursor-pointer ${
-                  activeCategoryFilter === 'Men Collection' ? 'text-[#093624]' : 'text-[#141414] hover:text-[#093624]'
-                }`}
+                className="block text-sm font-bold text-[#141414] hover:text-[#093624] transition-colors cursor-pointer"
               >
                 Men
               </Link>
@@ -130,15 +126,13 @@ export const OffcanvasMenu: React.FC = () => {
             {/* 3. Women */}
             <div className="border-b border-gray-100 py-2.5">
               <Link
-                href="/shop"
+                href="/women"
                 onClick={(e) => {
                   e.preventDefault();
-                  navigateToCategory('Women Collection');
+                  navigate('/women');
                   closeOffcanvas();
                 }}
-                className={`block text-sm font-bold transition-colors cursor-pointer ${
-                  activeCategoryFilter === 'Women Collection' ? 'text-[#093624]' : 'text-[#141414] hover:text-[#093624]'
-                }`}
+                className="block text-sm font-bold text-[#141414] hover:text-[#093624] transition-colors cursor-pointer"
               >
                 Women
               </Link>
@@ -147,15 +141,13 @@ export const OffcanvasMenu: React.FC = () => {
             {/* 4. New Arrivals */}
             <div className="border-b border-gray-100 py-2.5">
               <Link
-                href="/shop"
+                href="/new-arrivals"
                 onClick={(e) => {
                   e.preventDefault();
-                  navigateToCategory('new');
+                  navigate('/new-arrivals');
                   closeOffcanvas();
                 }}
-                className={`flex items-center justify-between text-sm font-bold transition-colors cursor-pointer ${
-                  activeCategoryFilter === 'new' ? 'text-[#093624]' : 'text-[#141414] hover:text-[#093624]'
-                }`}
+                className="flex items-center justify-between text-sm font-bold text-[#141414] hover:text-[#093624] transition-colors cursor-pointer"
               >
                 <span>New Arrivals</span>
                 <span className="text-[10px] font-bold uppercase tracking-wider bg-[#093624] text-[#F9F295] px-1.5 py-0.5 rounded-2xs">
@@ -188,39 +180,39 @@ export const OffcanvasMenu: React.FC = () => {
                 <div className="overflow-hidden pl-4 space-y-2 text-xs text-[#55585B] font-satoshi-med pt-1 border-l-2 border-[#093624]/20 ml-1">
                   <button
                     onClick={() => {
-                      navigateToCategory('all');
+                      navigate('/collections');
                       closeOffcanvas();
                     }}
                     className="block w-full text-left py-1 text-[#093624] font-bold hover:underline cursor-pointer"
                   >
-                    All Collections
+                    View All Collections
                   </button>
                   <button
                     onClick={() => {
-                      navigateToCategory('Men Collection');
+                      navigate('/collections');
                       closeOffcanvas();
                     }}
                     className="block w-full text-left py-1 hover:text-[#093624] cursor-pointer"
                   >
-                    Men&apos;s Summer & Premium
+                    Summer Series 2026
                   </button>
                   <button
                     onClick={() => {
-                      navigateToCategory('Women Collection');
+                      navigate('/collections');
                       closeOffcanvas();
                     }}
                     className="block w-full text-left py-1 hover:text-[#093624] cursor-pointer"
                   >
-                    Women&apos;s Festive & Pret
+                    Winter & Alpaca Knits
                   </button>
                   <button
                     onClick={() => {
-                      navigateToCategory('all');
+                      navigate('/collections');
                       closeOffcanvas();
                     }}
                     className="block w-full text-left py-1 hover:text-[#093624] cursor-pointer"
                   >
-                    Exclusive Dhaka Editions
+                    Office & Workleisure
                   </button>
                 </div>
               </div>
@@ -229,15 +221,13 @@ export const OffcanvasMenu: React.FC = () => {
             {/* 6. Sale */}
             <div className="border-b border-gray-100 py-2.5">
               <Link
-                href="/shop"
+                href="/sale"
                 onClick={(e) => {
                   e.preventDefault();
-                  navigateToCategory('sale');
+                  navigate('/sale');
                   closeOffcanvas();
                 }}
-                className={`flex items-center justify-between text-sm font-bold transition-colors cursor-pointer ${
-                  activeCategoryFilter === 'sale' ? 'text-red-700' : 'text-red-600 hover:text-red-700'
-                }`}
+                className="flex items-center justify-between text-sm font-bold text-red-600 hover:text-red-700 transition-colors cursor-pointer"
               >
                 <span>Sale</span>
                 <span className="text-[10px] font-bold uppercase tracking-wider bg-red-600 text-white px-1.5 py-0.5 rounded-2xs">

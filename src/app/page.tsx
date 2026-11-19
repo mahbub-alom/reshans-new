@@ -43,6 +43,11 @@ import { DashboardProfilePage } from '@/views/dashboard/DashboardProfilePage';
 import { DashboardSecurityPage } from '@/views/dashboard/DashboardSecurityPage';
 import { DashboardAddressPage } from '@/views/dashboard/DashboardAddressPage';
 import { ShopPage } from '@/views/ShopPage';
+import { MenPage } from '@/views/MenPage';
+import { WomenPage } from '@/views/WomenPage';
+// import { NewArrivalsPage } from '@/views/NewArrivalsPage';
+import { CollectionsPage } from '@/views/CollectionsPage';
+import { SalePage } from '@/views/SalePage';
 import { ProductDetailsPage } from '@/views/ProductDetailsPage';
 import { CartPage } from '@/views/CartPage';
 import { CheckoutPage } from '@/views/CheckoutPage';
@@ -78,6 +83,24 @@ export default function HomePage() {
       case '/product-filter-top.html':
       case '/products':
         return <ShopPage />;
+      case '/men':
+      case '/men.html':
+      case '/men-collection':
+        return <MenPage />;
+      case '/women':
+      case '/women.html':
+      case '/women-collection':
+        return <WomenPage />;
+      // case '/new-arrivals':
+      // case '/new-arrivals.html':
+      // case '/new':
+      //   return <NewArrivalsPage />;
+      case '/collections':
+      case '/collections.html':
+        return <CollectionsPage />;
+      case '/sale':
+      case '/sale.html':
+        return <SalePage />;
       case '/product-details':
       case '/product-details.html':
       case '/product-details-default':

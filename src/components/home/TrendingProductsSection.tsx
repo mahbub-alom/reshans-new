@@ -59,15 +59,15 @@ const TrendingCardItem: React.FC<TrendingCardItemProps> = ({ product }) => {
           key={resolvedFrontImage}
           src={resolvedFrontImage}
           alt={`${product.name} - ${selectedColor}`}
-          className="w-full h-full object-cover object-center transition-all duration-500 group-hover:scale-105"
+          className="w-full h-full object-cover object-center transition-all duration-700 ease-out"
         />
 
-        {/* Secondary Image for Hover Swap */}
+        {/* Secondary Image for Hover Swap with Smooth Zoom */}
         {product.backImage && (
           <img
             src={product.backImage}
             alt={`${product.name} alternate view`}
-            className="absolute inset-0 w-full h-full object-cover object-center opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+            className="absolute inset-0 w-full h-full object-cover object-center opacity-0 group-hover:opacity-100 scale-100 group-hover:scale-108 transition-all duration-700 ease-out"
           />
         )}
 
