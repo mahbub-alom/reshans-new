@@ -10,12 +10,12 @@ export const AboutPage: React.FC = () => {
 
   const TEAM_MEMBERS = [
     {
-      name: 'Tanvir Hossain',
+      name: 'Jariya Rahman',
       role: 'CO-FOUNDER & CEO',
       image: '/assets/img/about/about-thumb-5.jpg',
     },
     {
-      name: 'Nusrat Jahan',
+      name: 'Price Khan',
       role: 'HEAD OF BRAND MARKETING',
       image: '/assets/img/about/about-thumb-6.jpg',
     },
@@ -265,52 +265,7 @@ export const AboutPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 7. Bottom Trust Feature Strip */}
-      <div className="py-12 bg-white border-t border-[#F0EDED]">
-        <div className="max-w-[1330px] mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="flex items-center gap-4 p-4 rounded-xs">
-              <div className="w-12 h-12 rounded-full bg-[#093624]/10 text-[#093624] flex items-center justify-center shrink-0">
-                <Truck size={22} />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-[#141414] font-satoshi-bold">Free Nationwide Delivery</h4>
-                <p className="text-xs text-[#6D6868] font-satoshi">On all orders over ৳ 3,000</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 p-4 rounded-xs">
-              <div className="w-12 h-12 rounded-full bg-[#093624]/10 text-[#093624] flex items-center justify-center shrink-0">
-                <RotateCcw size={22} />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-[#141414] font-satoshi-bold">30 Days Hassle-Free Returns</h4>
-                <p className="text-xs text-[#6D6868] font-satoshi">Doorstep pickup available</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 p-4 rounded-xs">
-              <div className="w-12 h-12 rounded-full bg-[#093624]/10 text-[#093624] flex items-center justify-center shrink-0">
-                <CreditCard size={22} />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-[#141414] font-satoshi-bold">Flexible BDT Payments</h4>
-                <p className="text-xs text-[#6D6868] font-satoshi">bKash, Nagad, Cards & COD</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 p-4 rounded-xs">
-              <div className="w-12 h-12 rounded-full bg-[#093624]/10 text-[#093624] flex items-center justify-center shrink-0">
-                <Clock size={22} />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-[#141414] font-satoshi-bold">24/7 Dedicated Care</h4>
-                <p className="text-xs text-[#6D6868] font-satoshi">Fast concierge assistance</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+     
     </div>
   );
 };

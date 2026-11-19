@@ -175,7 +175,7 @@ export const Footer: React.FC = () => {
           {/* Column 5: Subscribe & Social (lg:col-span-3) */}
           <div className="lg:col-span-4">
             <h4 className="text-[20px] font-bold text-[#141414] font-satoshi-bold mb-3">
-              Subcribe.
+              Subscribe.
             </h4>
             <p className="text-[15px] text-[#6D6868] mb-3 font-satoshi leading-relaxed">
               Our conversation is just getting started

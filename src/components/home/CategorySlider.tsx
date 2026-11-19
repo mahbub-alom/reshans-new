@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { EffectCoverflow, Autoplay } from 'swiper/modules';
 import { useShop } from '../../context/ShopContext';
@@ -49,27 +49,41 @@ const CATEGORY_SLIDES = [...ORIGINAL_SLIDES, ...ORIGINAL_SLIDES];
 
 export const CategorySlider: React.FC = () => {
   const { navigateToCategory } = useShop();
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      // Mobile S, M, L typically <= 576px (or < 768px)
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   return (
     <div id="categories" className="py-10 sm:py-14 bg-white overflow-hidden">
       {/* 100% Accurate Swiper 3D Coverflow matching Reference Website aqf-category-2-area */}
       <div className="w-full">
         <Swiper
+          key={isMobile ? 'mobile-slider' : 'desktop-slider'}
           effect="coverflow"
           grabCursor={true}
           centeredSlides={true}
           loop={true}
-          speed={600}
+          speed={isMobile ? 380 : 600}
           watchSlidesProgress={true}
           autoplay={{
-            delay: 3200,
+            delay: isMobile ? 2400 : 3200,
             disableOnInteraction: false,
             pauseOnMouseEnter: true,
           }}
           coverflowEffect={{
             rotate: 0,
             stretch: 0,
-            depth: 150,
-            modifier: 2,
+            depth: isMobile ? 120 : 150,
+            modifier: isMobile ? 1.6 : 2,
             slideShadows: false,
           }}
           modules={[EffectCoverflow, Autoplay]}
@@ -87,7 +101,7 @@ export const CategorySlider: React.FC = () => {
               slidesPerView: 2,
             },
             0: {
-              slidesPerView: 1,
+              slidesPerView: 1.15,
             },
           }}
           className="!py-6"
