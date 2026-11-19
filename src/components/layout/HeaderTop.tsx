@@ -23,14 +23,15 @@ export const HeaderTop: React.FC = () => {
             </div>
             <div className="flex items-center gap-2 text-white/80 hover:text-white transition-colors">
               <Phone size={13} className="text-[#F9F295]" />
-              <a href="tel:01700000000" className="font-satoshi-med hover:underline">
-                +880 1700 000 000
+              
+              <a href="tel:01977378642" className="font-satoshi-med hover:underline">
+                +880 1977 378 642
               </a>
             </div>
           </div>
 
           {/* Center: Free Delivery / Promotion in BDT */}
-          <div className="flex-1 text-center text-white/90 font-satoshi-med px-2">
+          {/* <div className="flex-1 text-center text-white/90 font-satoshi-med px-2">
             <span>Free delivery across Bangladesh on orders over ৳ 2,500:{' '}</span>
             <button
               onClick={openAuth}
@@ -38,11 +39,11 @@ export const HeaderTop: React.FC = () => {
             >
               Sign Up
             </button>
-          </div>
+          </div> */}
 
           {/* Right: Currency & Language Dropdowns */}
-          <div className="hidden sm:flex items-center gap-5">
-            {/* Language Selector */}
+          {/* <div className="hidden sm:flex items-center gap-5">
+        
             <div className="relative">
               <button
                 onClick={() => {
@@ -74,7 +75,7 @@ export const HeaderTop: React.FC = () => {
               )}
             </div>
 
-            {/* Currency Selector (Default BDT) */}
+      
             <div className="relative">
               <button
                 onClick={() => {
@@ -120,7 +121,7 @@ export const HeaderTop: React.FC = () => {
               <span className="w-1.5 h-1.5 rounded-full bg-[#F9F295] group-hover:bg-[#093624]" />
               <span>Admin Panel</span>
             </button>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

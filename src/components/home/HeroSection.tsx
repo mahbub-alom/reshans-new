@@ -42,7 +42,7 @@ export const HeroSection: React.FC = () => {
               data-aos="fade-up"
               data-aos-duration="800"
               data-aos-delay="150"
-              className="text-white text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-7 drop-shadow-md text-balance font-satoshi-bold"
+              className="text-white! text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-7 drop-shadow-md text-balance font-satoshi-bold"
             >
               Online Exclusive
             </h1>
