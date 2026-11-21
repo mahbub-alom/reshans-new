@@ -37,7 +37,7 @@ interface DashboardSidebarProps {
 }
 
 export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab }) => {
-  const { navigate, openWishlist, wishlistCount } = useShop();
+  const { navigate, openWishlist, wishlistCount, currentUser, logoutUser } = useShop();
 
   const NAV_ITEMS: {
     id: DashboardTab | 'downloads' | 'offers' | 'logout';
@@ -116,7 +116,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab })
       id: 'logout',
       label: 'Logout',
       icon: <LogOut size={18} />,
-      onClick: () => navigate('/login'),
+      onClick: () => logoutUser(),
     },
   ];
 
@@ -135,17 +135,21 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab })
     <aside className="bg-white border border-[#EBEBEB] rounded-none p-6 shadow-2xs font-satoshi">
       {/* Profile Info Header matching .aq-dashboard-profile-info */}
       <div className="text-center pb-6 border-b border-[#F0EDED]">
-        <div className="w-20 h-20 mx-auto mb-3.5 rounded-full overflow-hidden border-2 border-primary/20 shadow-xs bg-[#F9F9F9]">
-          <img
-            src="/assets/img/others/dashboard-avater.jpg"
-            alt="Floyd Miles"
-            className="w-full h-full object-cover"
-          />
+        <div className="w-20 h-20 mx-auto mb-3.5 rounded-full overflow-hidden border-2 border-primary/20 shadow-xs bg-[#093624] text-[#F9F295] flex items-center justify-center text-2xl font-bold">
+          {currentUser?.avatar ? (
+            <img
+              src={currentUser.avatar}
+              alt={currentUser.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            (currentUser?.name || 'U').charAt(0).toUpperCase()
+          )}
         </div>
         <h3 className="text-lg font-bold font-satoshi-bold text-brand-black mb-0.5">
-          Floyd Miles
+          {currentUser?.name || 'Customer Account'}
         </h3>
-        <p className="text-xs text-brand-body font-satoshi">floydmiles@gmail.com</p>
+        <p className="text-xs text-brand-body font-satoshi">{currentUser?.email || 'customer@reshans.com'}</p>
       </div>
 
       {/* Sidebar Navigation Menu matching .aq-dashboard-sidebar-menu */}

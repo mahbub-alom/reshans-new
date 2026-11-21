@@ -6,6 +6,7 @@ import {
   Shirt,
   Package,
   Users,
+  UserCheck,
   Layers,
   Boxes,
   Image as ImageIcon,
@@ -26,6 +27,7 @@ export type AdminTab =
   | 'products'
   | 'orders'
   | 'customers'
+  | 'all-users'
   | 'categories'
   | 'inventory'
   | 'banners'
@@ -55,7 +57,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   isOpenMobile,
   onCloseMobile,
 }) => {
-  const { navigate, orders, products, reviews, adminProfile } = useShop();
+  const { navigate, orders, products, reviews, adminProfile, logoutUser } = useShop();
 
   // Dynamic counts for notification badges
   const pendingOrdersCount = orders.filter((o) => o.orderStatus === 'Pending' || o.orderStatus === 'Processing').length;
@@ -85,6 +87,11 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       id: 'customers',
       label: 'Customers',
       icon: <Users size={18} />,
+    },
+    {
+      id: 'all-users',
+      label: 'All Users',
+      icon: <UserCheck size={18} />,
     },
     {
       id: 'categories',
@@ -229,9 +236,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               </div>
             </div>
             <button
-              onClick={() => navigate('/')}
-              title="Return to Store"
-              className="p-1.5 text-white/60 hover:text-white hover:bg-white/10 rounded-xs transition-colors cursor-pointer"
+              onClick={() => logoutUser()}
+              title="Sign Out from Admin Panel"
+              className="p-1.5 text-white/60 hover:text-red-300 hover:bg-white/10 rounded-xs transition-colors cursor-pointer"
             >
               <LogOut size={16} />
             </button>

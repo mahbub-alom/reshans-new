@@ -19,7 +19,21 @@ export const Header: React.FC = () => {
     navigateToCategory,
     currentPath,
     activeCategoryFilter,
+    isAuthenticated,
+    isAdmin,
   } = useShop();
+
+  const handleUserClick = () => {
+    if (isAuthenticated) {
+      if (isAdmin) {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
+    } else {
+      navigate('/login');
+    }
+  };
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -252,10 +266,10 @@ export const Header: React.FC = () => {
 
             {/* 2nd: Profile / Account Trigger (Desktop Only, accessible in hamburger menu on mobile) */}
             <button
-              onClick={() => navigate('/dashboard')}
+              onClick={handleUserClick}
               aria-label="User account"
               className="hidden lg:flex p-2 text-[#141414] hover:text-[#093624] hover:scale-105 transition-all cursor-pointer rounded-full hover:bg-gray-100/80"
-              title="Customer Dashboard"
+              title={isAuthenticated ? (isAdmin ? 'Admin Dashboard' : 'Customer Dashboard') : 'Sign In'}
             >
               <User size={20} />
             </button>

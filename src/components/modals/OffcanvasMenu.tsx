@@ -16,7 +16,22 @@ export const OffcanvasMenu: React.FC = () => {
     navigate,
     navigateToCategory,
     activeCategoryFilter,
+    isAuthenticated,
+    isAdmin,
   } = useShop();
+
+  const handleAccountClick = () => {
+    closeOffcanvas();
+    if (isAuthenticated) {
+      if (isAdmin) {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
+    } else {
+      navigate('/login');
+    }
+  };
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
 
   const toggleSubmenu = (menu: string) => {
@@ -70,14 +85,11 @@ export const OffcanvasMenu: React.FC = () => {
             </button>
             <span>·</span>
             <button
-              onClick={() => {
-                closeOffcanvas();
-                openAuth();
-              }}
+              onClick={handleAccountClick}
               className="hover:underline cursor-pointer flex items-center gap-1"
             >
               <User size={13} className="text-[#093624]" />
-              <span>Account</span>
+              <span>{isAuthenticated ? (isAdmin ? 'Admin' : 'Dashboard') : 'Account'}</span>
             </button>
             <span>·</span>
             <button

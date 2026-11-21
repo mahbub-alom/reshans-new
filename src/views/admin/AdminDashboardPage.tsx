@@ -7,6 +7,7 @@ import { AdminOverviewTab } from './tabs/AdminOverviewTab';
 import { AdminProductsTab } from './tabs/AdminProductsTab';
 import { AdminOrdersTab } from './tabs/AdminOrdersTab';
 import { AdminCustomersTab } from './tabs/AdminCustomersTab';
+import { AdminAllUsersTab } from './tabs/AdminAllUsersTab';
 import { AdminCategoriesTab } from './tabs/AdminCategoriesTab';
 import { AdminInventoryTab } from './tabs/AdminInventoryTab';
 import { AdminBannersTab } from './tabs/AdminBannersTab';
@@ -23,6 +24,7 @@ export const AdminDashboardPage: React.FC = () => {
   const resolveTabFromPath = (): AdminTab => {
     if (currentPath.includes('/admin/products')) return 'products';
     if (currentPath.includes('/admin/orders')) return 'orders';
+    if (currentPath.includes('/admin/all-users')) return 'all-users';
     if (currentPath.includes('/admin/customers')) return 'customers';
     if (currentPath.includes('/admin/categories')) return 'categories';
     if (currentPath.includes('/admin/inventory')) return 'inventory';
@@ -61,6 +63,8 @@ export const AdminDashboardPage: React.FC = () => {
         return <AdminOrdersTab />;
       case 'customers':
         return <AdminCustomersTab />;
+      case 'all-users':
+        return <AdminAllUsersTab />;
       case 'categories':
         return <AdminCategoriesTab />;
       case 'inventory':

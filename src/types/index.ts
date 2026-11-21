@@ -174,6 +174,18 @@ export interface WebsiteSettings {
   paymentCards: boolean;
 }
 
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  role: 'ADMIN' | 'CUSTOMER';
+  avatar?: string;
+  phone?: string;
+  city?: string;
+  authProvider?: 'LOCAL' | 'GOOGLE' | 'FACEBOOK';
+  status?: string;
+}
+
 export interface AdminProfile {
   name: string;
   email: string;

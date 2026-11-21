@@ -1,6 +1,20 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import prisma from '@/lib/prisma';
 import { PRODUCTS } from '@/data/products';
+import { SESSION_COOKIE_NAME, validateSessionToken } from '@/lib/auth';
+
+async function verifyAdminAuth(request: Request) {
+  const cookieStore = await cookies();
+  const cookieToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const authHeader = request.headers.get('authorization');
+  const headerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
+  const token = headerToken || cookieToken;
+  if (!token) return null;
+  const user = await validateSessionToken(token);
+  if (!user || user.role !== 'ADMIN') return null;
+  return user;
+}
 
 export async function GET(
   request: Request,
@@ -48,6 +62,14 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const admin = await verifyAdminAuth(request);
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Administrator privileges required to update products' },
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
     const updates = await request.json();
 
@@ -81,6 +103,14 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const admin = await verifyAdminAuth(request);
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Administrator privileges required to delete products' },
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
 
     if (process.env.DATABASE_URL) {

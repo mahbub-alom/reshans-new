@@ -13,6 +13,7 @@ import {
   WebsiteBanner,
   WebsiteSettings,
   AdminProfile,
+  AuthUser,
 } from '../types';
 import { PRODUCTS } from '../data/products';
 import {
@@ -156,6 +157,17 @@ interface ShopContextType {
   settings: WebsiteSettings;
   updateSettings: (newSettings: Partial<WebsiteSettings>) => void;
 
+  // Authentication & Session
+  currentUser: AuthUser | null;
+  authToken: string | null;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+  authLoading: boolean;
+  loginUser: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  loginWithSocial: (provider: string, email: string, name?: string) => Promise<{ success: boolean; error?: string }>;
+  registerUser: (name: string, email: string, password: string, phone?: string) => Promise<{ success: boolean; error?: string }>;
+  logoutUser: () => Promise<void>;
+
   adminProfile: AdminProfile;
   updateAdminProfile: (profile: Partial<AdminProfile>) => void;
 }
@@ -198,6 +210,123 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [banners, setBanners] = useState<WebsiteBanner[]>(INITIAL_BANNERS);
   const [settings, setSettings] = useState<WebsiteSettings>(INITIAL_SETTINGS);
   const [adminProfile, setAdminProfile] = useState<AdminProfile>(INITIAL_ADMIN_PROFILE);
+
+  // Authentication State
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState<boolean>(true);
+
+  // Validate session on mount
+  useEffect(() => {
+    const checkCurrentSession = async () => {
+      try {
+        const storedToken = localStorage.getItem('reshans_auth_token');
+        const res = await fetch('/api/auth/me', {
+          headers: storedToken ? { Authorization: `Bearer ${storedToken}` } : {},
+          credentials: 'include',
+        });
+        const data = await res.json();
+        if (data.authenticated && data.user) {
+          setCurrentUser(data.user);
+          if (storedToken) setAuthToken(storedToken);
+        } else {
+          setCurrentUser(null);
+          setAuthToken(null);
+          localStorage.removeItem('reshans_auth_token');
+        }
+      } catch (err) {
+        console.warn('Session check failed:', err);
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    checkCurrentSession();
+  }, []);
+
+  const loginUser = async (email: string, password: string) => {
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.error || 'Login failed' };
+      }
+      setCurrentUser(data.user);
+      setAuthToken(data.token);
+      localStorage.setItem('reshans_auth_token', data.token);
+      showToast(data.message || 'Logged in successfully!');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Network error' };
+    }
+  };
+
+  const loginWithSocial = async (provider: string, email: string, name?: string) => {
+    try {
+      const res = await fetch('/api/auth/social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, email, name }),
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.error || 'Social login failed' };
+      }
+      setCurrentUser(data.user);
+      setAuthToken(data.token);
+      localStorage.setItem('reshans_auth_token', data.token);
+      showToast(data.message || 'Signed in via social account!');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Network error' };
+    }
+  };
+
+  const registerUser = async (name: string, email: string, password: string, phone?: string) => {
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password, phone }),
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.error || 'Registration failed' };
+      }
+      setCurrentUser(data.user);
+      setAuthToken(data.token);
+      localStorage.setItem('reshans_auth_token', data.token);
+      showToast(data.message || 'Registration successful!');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Network error' };
+    }
+  };
+
+  const logoutUser = async () => {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+        credentials: 'include',
+      });
+    } catch (err) {
+      console.warn('Logout error:', err);
+    } finally {
+      setCurrentUser(null);
+      setAuthToken(null);
+      localStorage.removeItem('reshans_auth_token');
+      showToast('You have been logged out.');
+      navigate('/login');
+    }
+  };
 
   // Pre-seed cart with 2 default items in BDT (or restore from localStorage)
   const [cart, setCart] = useState<CartItem[]>(() => {
@@ -935,6 +1064,15 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toggleBanner,
         settings,
         updateSettings,
+        currentUser,
+        authToken,
+        isAuthenticated: !!currentUser,
+        isAdmin: currentUser?.role === 'ADMIN',
+        authLoading,
+        loginUser,
+        loginWithSocial,
+        registerUser,
+        logoutUser,
         adminProfile,
         updateAdminProfile,
       }}

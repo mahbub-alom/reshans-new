@@ -25,24 +25,77 @@ enum PaymentStatus {
   REFUNDED
 }
 
-model User {
-  id        String    @id @default(uuid())
-  name      String
-  email     String    @unique
-  password  String
-  role      Role      @default(CUSTOMER)
-  phone     String?
-  avatar    String?   @db.Text
-  city      String?   @default("Dhaka")
-  status    String    @default("Active") // Active, Blocked
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+  FACEBOOK
+}
 
-  orders    Order[]
-  reviews   Review[]
-  addresses Address[]
+model User {
+  id               String       @id @default(uuid())
+  name             String
+  email            String       @unique
+  password         String?
+  role             Role         @default(CUSTOMER)
+  authProvider     AuthProvider @default(LOCAL)
+  socialId         String?
+  phone            String?
+  avatar           String?      @db.Text
+  city             String?      @default("Dhaka")
+  status           String       @default("Active") // Active, Blocked
+  passwordResetReq Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  orders           Order[]
+  reviews          Review[]
+  addresses        Address[]
+  sessions         Session[]
 
   @@map("users")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  token     String   @unique @db.VarChar(255)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ipAddress String?
+  userAgent String?  @db.Text
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+  @@map("sessions")
+}
+
+model SecurityLog {
+  id        String   @id @default(uuid())
+  eventType String   // LOGIN_SUCCESS, LOGIN_FAILED, LOGOUT, REGISTER, ROLE_CHANGE, PASSWORD_RESET, IP_BLOCKED
+  email     String?
+  userId    String?
+  ipAddress String?
+  details   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([ipAddress])
+  @@index([eventType])
+  @@map("security_logs")
+}
+
+model IpRateLimit {
+  id             String    @id @default(uuid())
+  ipAddress      String    @unique
+  attempts       Int       @default(1)
+  windowStart    DateTime  @default(now())
+  blockedUntil   DateTime?
+  blockedReason  String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([ipAddress])
+  @@map("ip_rate_limits")
 }
 
 model Address {

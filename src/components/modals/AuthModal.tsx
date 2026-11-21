@@ -4,33 +4,73 @@ import { Button } from '../common/Button';
 import { X, Lock, Mail, User, Eye, EyeOff } from 'lucide-react';
 
 export const AuthModal: React.FC = () => {
-  const { isAuthOpen, closeAuth, navigate } = useShop();
+  const { isAuthOpen, closeAuth, navigate, loginUser, registerUser, loginWithSocial } = useShop();
   const [tab, setTab] = useState<'login' | 'register'>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg('');
+    setIsSubmitting(true);
+
     if (tab === 'login') {
-      setSuccessMsg(`Welcome back to Reshans, ${email.split('@')[0]}!`);
+      const res = await loginUser(email, password);
+      setIsSubmitting(false);
+      if (res.success) {
+        setSuccessMsg(`Welcome back to Reshans!`);
+        setTimeout(() => {
+          setSuccessMsg('');
+          closeAuth();
+          if (email.toLowerCase().includes('admin')) {
+            navigate('/admin');
+          } else {
+            navigate('/dashboard');
+          }
+        }, 800);
+      } else {
+        setErrorMsg(res.error || 'Login failed.');
+      }
     } else {
-      setSuccessMsg(`Account created successfully for ${name}! Welcome to Reshans.`);
+      const res = await registerUser(name, email, password);
+      setIsSubmitting(false);
+      if (res.success) {
+        setSuccessMsg(`Account created successfully for ${name}! Welcome to Reshans.`);
+        setTimeout(() => {
+          setSuccessMsg('');
+          closeAuth();
+          navigate('/dashboard');
+        }, 800);
+      } else {
+        setErrorMsg(res.error || 'Registration failed.');
+      }
     }
-    setTimeout(() => {
-      setSuccessMsg('');
-      closeAuth();
-    }, 1500);
   };
 
-  const handleSocialAuth = (provider: string) => {
-    setSuccessMsg(`Successfully authenticated via ${provider}! Welcome to Reshans.`);
-    setTimeout(() => {
-      setSuccessMsg('');
-      closeAuth();
-    }, 1500);
+  const handleSocialAuth = async (provider: string) => {
+    setErrorMsg('');
+    const promptEmail = prompt(`Enter ${provider} Account Email:`, `user.${provider.toLowerCase()}@example.com`);
+    if (!promptEmail) return;
+
+    setIsSubmitting(true);
+    const res = await loginWithSocial(provider, promptEmail, promptEmail.split('@')[0]);
+    setIsSubmitting(false);
+
+    if (res.success) {
+      setSuccessMsg(`Successfully authenticated via ${provider}! Welcome to Reshans.`);
+      setTimeout(() => {
+        setSuccessMsg('');
+        closeAuth();
+        navigate('/dashboard');
+      }, 800);
+    } else {
+      setErrorMsg(res.error || `${provider} authentication failed.`);
+    }
   };
 
   return (
@@ -85,6 +125,12 @@ export const AuthModal: React.FC = () => {
             Create Account
           </button>
         </div>
+
+        {errorMsg && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-satoshi-bold text-center">
+            {errorMsg}
+          </div>
+        )}
 
         {successMsg ? (
           <div className="text-center py-8">

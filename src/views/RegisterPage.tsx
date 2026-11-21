@@ -4,7 +4,7 @@ import { Button } from '../components/common/Button';
 import { Eye, EyeOff } from 'lucide-react';
 
 export const RegisterPage: React.FC = () => {
-  const { navigate } = useShop();
+  const { navigate, registerUser, loginWithSocial } = useShop();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -13,11 +13,15 @@ export const RegisterPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName || !email || !password || !confirmPassword) return;
+    if (!fullName || !email || !password || !confirmPassword) {
+      setError('Please fill in all required fields.');
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match. Please re-enter.');
@@ -30,11 +34,37 @@ export const RegisterPage: React.FC = () => {
     }
 
     setError(null);
-    setIsSuccess(true);
-    setTimeout(() => {
-      setIsSuccess(false);
-      navigate('/dashboard');
-    }, 1200);
+    setIsSubmitting(true);
+
+    const result = await registerUser(fullName, email, password);
+    setIsSubmitting(false);
+
+    if (result.success) {
+      setIsSuccess(true);
+      setTimeout(() => {
+        setIsSuccess(false);
+        navigate('/dashboard');
+      }, 1000);
+    } else {
+      setError(result.error || 'Registration failed.');
+    }
+  };
+
+  const handleSocialClick = async (provider: string, mockEmail: string, mockName: string) => {
+    setIsSubmitting(true);
+    setError(null);
+    const result = await loginWithSocial(provider, mockEmail, mockName);
+    setIsSubmitting(false);
+
+    if (result.success) {
+      setIsSuccess(true);
+      setTimeout(() => {
+        setIsSuccess(false);
+        navigate('/dashboard');
+      }, 800);
+    } else {
+      setError(result.error || `${provider} registration failed.`);
+    }
   };
 
   return (
@@ -214,10 +244,10 @@ export const RegisterPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setFullName('Google User');
-                      setEmail('google.account@gmail.com');
-                      setPassword('GooglePass2026!');
-                      setConfirmPassword('GooglePass2026!');
+                      const guestGoogleEmail = prompt('Enter Google Account Email for Registration/Login:', 'newuser.google@gmail.com');
+                      if (guestGoogleEmail) {
+                        handleSocialClick('GOOGLE', guestGoogleEmail, guestGoogleEmail.split('@')[0]);
+                      }
                     }}
                     title="Register with Google"
                     className="w-11 h-11 border border-[#E0DCD9] hover:border-primary flex items-center justify-center bg-white hover:bg-gray-50 transition-all rounded-none cursor-pointer"
@@ -246,10 +276,10 @@ export const RegisterPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setFullName('Facebook User');
-                      setEmail('facebook.user@reshans.com');
-                      setPassword('FbPass2026!');
-                      setConfirmPassword('FbPass2026!');
+                      const guestFbEmail = prompt('Enter Facebook Account Email for Registration/Login:', 'newuser.fb@facebook.com');
+                      if (guestFbEmail) {
+                        handleSocialClick('FACEBOOK', guestFbEmail, guestFbEmail.split('@')[0]);
+                      }
                     }}
                     title="Register with Facebook"
                     className="w-11 h-11 border border-[#E0DCD9] hover:border-primary flex items-center justify-center bg-white hover:bg-gray-50 transition-all rounded-none cursor-pointer text-[#1877F2]"

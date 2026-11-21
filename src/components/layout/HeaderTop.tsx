@@ -5,7 +5,7 @@ import { Phone, ChevronDown, Instagram } from 'lucide-react';
 import { useShop } from '../../context/ShopContext';
 
 export const HeaderTop: React.FC = () => {
-  const { openAuth, navigate } = useShop();
+  const { openAuth, navigate, currentUser, isAuthenticated, isAdmin, logoutUser } = useShop();
   const [lang, setLang] = useState('English');
   const [curr, setCurr] = useState('BDT');
   const [isLangOpen, setIsLangOpen] = useState(false);
@@ -41,87 +41,55 @@ export const HeaderTop: React.FC = () => {
             </button>
           </div> */}
 
-          {/* Right: Currency & Language Dropdowns */}
-          {/* <div className="hidden sm:flex items-center gap-5">
-        
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setIsLangOpen(!isLangOpen);
-                  setIsCurrOpen(false);
-                }}
-                className="flex items-center gap-1 text-white/80 hover:text-white font-satoshi-med cursor-pointer"
-              >
-                <span>{lang}</span>
-                <ChevronDown size={12} />
-              </button>
-              {isLangOpen && (
-                <div className="absolute right-0 top-full mt-2 w-28 bg-white text-[#141414] shadow-lg rounded-xs py-1.5 z-50 border border-gray-100">
-                  {['English', 'বাংলা (Bangla)', 'Spanish'].map((l) => (
-                    <button
-                      key={l}
-                      onClick={() => {
-                        setLang(l);
-                        setIsLangOpen(false);
-                      }}
-                      className={`w-full text-left px-3 py-1 text-xs hover:bg-gray-100 ${
-                        lang === l ? 'font-bold text-[#093624]' : ''
-                      }`}
-                    >
-                      {l}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+          {/* Right: Auth & Account Navigation */}
+          <div className="flex items-center gap-4 text-xs font-satoshi-med">
+            {isAuthenticated ? (
+              <div className="flex items-center gap-3">
+                <span className="text-white/80">
+                  Welcome, <strong className="text-[#F9F295] font-satoshi-bold">{currentUser?.name}</strong>
+                </span>
 
-      
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setIsCurrOpen(!isCurrOpen);
-                  setIsLangOpen(false);
-                }}
-                className="flex items-center gap-1 text-white/80 hover:text-white font-satoshi-med cursor-pointer"
-              >
-                <span>{curr} (৳)</span>
-                <ChevronDown size={12} />
-              </button>
-              {isCurrOpen && (
-                <div className="absolute right-0 top-full mt-2 w-28 bg-white text-[#141414] shadow-lg rounded-xs py-1.5 z-50 border border-gray-100">
-                  {['BDT (৳)', 'USD ($)', 'EUR (€)', 'GBP (£)'].map((c) => (
-                    <button
-                      key={c}
-                      onClick={() => {
-                        setCurr(c.split(' ')[0]);
-                        setIsCurrOpen(false);
-                      }}
-                      className={`w-full text-left px-3 py-1 text-xs hover:bg-gray-100 ${
-                        curr === c.split(' ')[0] ? 'font-bold text-[#093624]' : ''
-                      }`}
-                    >
-                      {c}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+                {isAdmin && (
+                  <button
+                    onClick={() => navigate('/admin')}
+                    className="px-2 py-0.5 bg-[#F9F295] text-[#093624] font-bold rounded-xs text-[11px] uppercase tracking-wider hover:bg-white transition-colors cursor-pointer"
+                  >
+                    Admin Panel
+                  </button>
+                )}
 
-            <button
-              onClick={openAuth}
-              className="text-white/80 hover:text-[#F9F295] font-satoshi-med transition-colors cursor-pointer"
-            >
-              Account
-            </button>
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  className="text-white/80 hover:text-white hover:underline cursor-pointer"
+                >
+                  Dashboard
+                </button>
 
-            <button
-              onClick={() => navigate('/admin')}
-              className="px-2 py-0.5 bg-white/10 hover:bg-[#F9F295] text-[#F9F295] hover:text-[#093624] rounded-xs font-satoshi-bold text-[11px] uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-[#F9F295] group-hover:bg-[#093624]" />
-              <span>Admin Panel</span>
-            </button>
-          </div> */}
+                <button
+                  onClick={() => logoutUser()}
+                  className="text-white/60 hover:text-red-300 transition-colors cursor-pointer ml-1"
+                >
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => navigate('/login')}
+                  className="text-white/90 hover:text-[#F9F295] transition-colors cursor-pointer"
+                >
+                  Sign In
+                </button>
+                <span className="text-white/40">|</span>
+                <button
+                  onClick={() => navigate('/register')}
+                  className="text-white/90 hover:text-[#F9F295] transition-colors cursor-pointer"
+                >
+                  Register
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

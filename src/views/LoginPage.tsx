@@ -4,21 +4,58 @@ import { Button } from '../components/common/Button';
 import { Eye, EyeOff } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
-  const { navigate } = useShop();
+  const { navigate, loginUser, loginWithSocial } = useShop();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
-    setIsSuccess(true);
-    setTimeout(() => {
-      setIsSuccess(false);
-      navigate('/dashboard');
-    }, 1200);
+    if (!email || !password) {
+      setErrorMessage('Please enter both email and password.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
+    const result = await loginUser(email, password);
+    setIsSubmitting(false);
+
+    if (result.success) {
+      setIsSuccess(true);
+      setTimeout(() => {
+        setIsSuccess(false);
+        if (email.toLowerCase().includes('admin')) {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
+      }, 800);
+    } else {
+      setErrorMessage(result.error || 'Failed to authenticate. Please check your credentials.');
+    }
+  };
+
+  const handleSocialClick = async (provider: string, mockEmail: string, mockName: string) => {
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    const result = await loginWithSocial(provider, mockEmail, mockName);
+    setIsSubmitting(false);
+
+    if (result.success) {
+      setIsSuccess(true);
+      setTimeout(() => {
+        setIsSuccess(false);
+        navigate('/dashboard');
+      }, 800);
+    } else {
+      setErrorMessage(result.error || `${provider} authentication failed.`);
+    }
   };
 
   return (
@@ -48,6 +85,12 @@ export const LoginPage: React.FC = () => {
                     Please enter your details below to sign in.
                   </p>
                 </div>
+
+                {errorMessage && (
+                  <div className="mb-6 p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs font-satoshi-bold text-center">
+                    {errorMessage}
+                  </div>
+                )}
 
                 {isSuccess && (
                   <div className="mb-6 p-3.5 bg-primary/10 border border-primary text-primary text-xs font-satoshi-bold text-center">
@@ -159,8 +202,10 @@ export const LoginPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setEmail('guest.user@gmail.com');
-                      setPassword('demo123456');
+                      const guestGoogleEmail = prompt('Enter Google Account Email for Social Login:', 'customer.google@gmail.com');
+                      if (guestGoogleEmail) {
+                        handleSocialClick('GOOGLE', guestGoogleEmail, guestGoogleEmail.split('@')[0]);
+                      }
                     }}
                     title="Sign in with Google"
                     className="w-11 h-11 border border-[#E0DCD9] hover:border-primary flex items-center justify-center bg-white hover:bg-gray-50 transition-all rounded-none cursor-pointer"
@@ -189,8 +234,10 @@ export const LoginPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setEmail('facebook.user@reshans.com');
-                      setPassword('demo123456');
+                      const guestFbEmail = prompt('Enter Facebook Account Email for Social Login:', 'customer.fb@facebook.com');
+                      if (guestFbEmail) {
+                        handleSocialClick('FACEBOOK', guestFbEmail, guestFbEmail.split('@')[0]);
+                      }
                     }}
                     title="Sign in with Facebook"
                     className="w-11 h-11 border border-[#E0DCD9] hover:border-primary flex items-center justify-center bg-white hover:bg-gray-50 transition-all rounded-none cursor-pointer text-[#1877F2]"

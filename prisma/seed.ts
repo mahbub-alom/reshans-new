@@ -1,9 +1,8 @@
-import { PrismaClient, Role, OrderStatus, PaymentStatus } from '@prisma/client';
+import { Role, OrderStatus, PaymentStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import prisma from '../src/lib/prisma';
 import { PRODUCTS } from '../src/data/products';
 import { INITIAL_ORDERS, INITIAL_CUSTOMERS, INITIAL_COUPONS, INITIAL_REVIEWS, INITIAL_BANNERS, INITIAL_SETTINGS } from '../src/data/adminInitialData';
-
-const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Starting Reshans Fashion Atelier database seeding...');

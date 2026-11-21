@@ -38,6 +38,10 @@ const TAB_TITLES: Record<AdminTab, { title: string; subtitle: string }> = {
     title: 'Customer Directory',
     subtitle: 'View customer accounts, lifetime expenditure, and order histories',
   },
+  'all-users': {
+    title: 'All Users & Role Management',
+    subtitle: 'Manage all accounts, promote/demote administrators, and security privileges',
+  },
   categories: {
     title: 'Categories & Brands',
     subtitle: 'Organize catalog collections, clothing departments, and fashion labels',
@@ -74,7 +78,7 @@ export const AdminTopNavbar: React.FC<AdminTopNavbarProps> = ({
   searchQuery,
   setSearchQuery,
 }) => {
-  const { navigate, orders, products, adminProfile } = useShop();
+  const { navigate, orders, products, adminProfile, currentUser, logoutUser } = useShop();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
@@ -277,11 +281,12 @@ export const AdminTopNavbar: React.FC<AdminTopNavbarProps> = ({
                 <button
                   onClick={() => {
                     setIsProfileOpen(false);
-                    navigate('/dashboard');
+                    logoutUser();
                   }}
-                  className="w-full text-left px-4 py-2 text-xs font-satoshi text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="w-full text-left px-4 py-2 text-xs font-satoshi text-red-600 hover:bg-red-50 transition-colors cursor-pointer border-t border-gray-100 flex items-center justify-between"
                 >
-                  Customer Account
+                  <span>Sign Out</span>
+                  <ExternalLink size={12} className="text-red-400" />
                 </button>
               </div>
             )}
