@@ -223,27 +223,31 @@ export const NewArrivalsSection: React.FC = () => {
                             key={prod.id}
                             className="group relative flex flex-col bg-white rounded-xs overflow-hidden border border-gray-100 p-2.5 sm:p-3 shadow-2xs hover:shadow-md transition-all duration-300"
                           >
-                            {/* Product Image - only image click navigates to details */}
-                            <Link
-                              href={prodUrl}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                navigate(prodUrl);
-                              }}
-                              className="relative aspect-[3/4] w-full overflow-hidden bg-gray-100 rounded-xs mb-3 cursor-pointer block"
-                            >
+                            {/* Product Image */}
+                            <div className="relative aspect-[3/4] w-full overflow-hidden bg-gray-100 rounded-xs mb-3">
+                              {/* Only image click navigates to details */}
+                              <Link
+                                href={prodUrl}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  navigate(prodUrl);
+                                }}
+                                className="absolute inset-0 w-full h-full cursor-pointer block z-0"
+                                aria-label={`View ${prod.name}`}
+                              >
+                                <img
+                                  src={prod.image}
+                                  alt={prod.name}
+                                  className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                                />
+                              </Link>
+
                               {/* Badge */}
                               {prod.badge && (
-                                <span className="absolute top-2.5 left-2.5 z-10 text-[10px] font-bold uppercase tracking-wider py-0.5 px-2 bg-[#093624] text-[#F9F295] rounded-xs font-satoshi-bold">
+                                <span className="absolute top-2.5 left-2.5 z-10 text-[10px] font-bold uppercase tracking-wider py-0.5 px-2 bg-[#093624] text-[#F9F295] rounded-xs font-satoshi-bold pointer-events-none">
                                   {prod.badge}
                                 </span>
                               )}
-
-                              <img
-                                src={prod.image}
-                                alt={prod.name}
-                                className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500 pointer-events-none"
-                              />
 
                               {/* Floating Actions on Hover */}
                               <div className="absolute right-2 top-2 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
@@ -320,7 +324,7 @@ export const NewArrivalsSection: React.FC = () => {
                                   <ShoppingBag size={14} />
                                 </button>
                               </div>
-                            </Link>
+                            </div>
 
                             {/* Details */}
                             <div className="text-center flex flex-col items-center">

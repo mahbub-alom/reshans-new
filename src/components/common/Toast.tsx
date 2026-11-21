@@ -10,7 +10,7 @@ export const Toast: React.FC = () => {
   if (!toastMessage) return null;
 
   return (
-    <div className="fixed bottom-6 left-6 z-50 flex items-center gap-3 bg-[#093624] text-white py-3 px-4 rounded-xs shadow-2xl border border-[#0d4a32] animate-bounce-in">
+    <div className="fixed top-6 right-6 z-50 flex items-center gap-3 bg-[#093624] text-white py-3 px-4 rounded-xs shadow-2xl border border-[#0d4a32] animate-bounce-in">
       <CheckCircle2 size={18} className="text-[#F9F295] shrink-0" />
       <span className="text-xs font-semibold tracking-wide">{toastMessage}</span>
       <button

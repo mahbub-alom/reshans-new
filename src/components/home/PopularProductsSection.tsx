@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PRODUCTS } from '../../data/products';
 import { ProductCard } from '../product/ProductCard';
+import { ProductSkeleton } from '../common/ProductSkeleton';
 import { useShop } from '../../context/ShopContext';
 
 type TabKey = 'new' | 'featured' | 'top_sellers';
@@ -10,6 +11,15 @@ type TabKey = 'new' | 'featured' | 'top_sellers';
 export const PopularProductsSection: React.FC = () => {
   const { products } = useShop();
   const [activeTab, setActiveTab] = useState<TabKey>('new');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Show smooth skeleton placeholder on initial load / reload
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, []);
 
   const tabs: { key: TabKey; label: string }[] = [
     { key: 'new', label: 'New' },
@@ -65,19 +75,23 @@ export const PopularProductsSection: React.FC = () => {
           </div>
         </div>
 
-        {/* 4-Column Product Grid with Staggered AOS */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-          {displayedProducts.map((product, index) => (
-            <div
-              key={product.id}
-              data-aos="fade-up"
-              data-aos-duration="600"
-              data-aos-delay={(index % 4) * 80}
-            >
-              <ProductCard product={product} />
-            </div>
-          ))}
-        </div>
+        {/* 4-Column Product Grid with Skeleton Loader on Reload */}
+        {isLoading ? (
+          <ProductSkeleton count={8} />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+            {displayedProducts.map((product, index) => (
+              <div
+                key={product.id}
+                data-aos="fade-up"
+                data-aos-duration="600"
+                data-aos-delay={(index % 4) * 80}
+              >
+                <ProductCard product={product} />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

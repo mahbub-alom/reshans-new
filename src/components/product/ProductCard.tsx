@@ -40,12 +40,43 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, showCategory 
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Product Image Frame - only image is clickable to product details */}
-      <Link
-        href={productUrl}
-        onClick={handleImageClick}
-        className="relative aspect-[3/4] w-full overflow-hidden bg-[#F7F7F7] rounded-sm cursor-pointer block"
-      >
+      {/* Product Image Frame */}
+      <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#F7F7F7] rounded-sm">
+        {/* Only clicking the image navigates to details */}
+        <Link
+          href={productUrl}
+          onClick={handleImageClick}
+          className="absolute inset-0 w-full h-full cursor-pointer block z-0"
+          aria-label={`View ${product.name}`}
+        >
+          {/* Front & Back Image Swap on Hover with Smooth Zoom */}
+          <div className="relative w-full h-full overflow-hidden">
+            <img
+              key={resolvedFrontImage}
+              src={resolvedFrontImage}
+              alt={`${product.name} - ${selectedColor}`}
+              className={`w-full h-full object-cover object-top transition-all duration-700 ease-out ${
+                isHovered && product.backImage
+                  ? 'opacity-0 scale-100 pointer-events-none'
+                  : 'opacity-100 scale-100'
+              }`}
+              loading="lazy"
+            />
+            {product.backImage && (
+              <img
+                src={product.backImage}
+                alt={`${product.name} back view`}
+                className={`absolute inset-0 w-full h-full object-cover object-top transition-all duration-700 ease-out ${
+                  isHovered
+                    ? 'opacity-100 scale-108'
+                    : 'opacity-0 scale-100 pointer-events-none'
+                }`}
+                loading="lazy"
+              />
+            )}
+          </div>
+        </Link>
+
         {/* Badges */}
         <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 pointer-events-none">
           {product.discount && (
@@ -67,7 +98,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, showCategory 
 
         {/* Wishlist Button (Top Right) */}
         <button
+          type="button"
           onClick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
             toggleWishlist(product.id);
           }}
@@ -80,33 +113,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, showCategory 
         >
           <Heart size={16} className={inWishlist ? 'fill-[#F9F295]' : ''} />
         </button>
-
-        {/* Front & Back Image Swap on Hover with Smooth Zoom */}
-        <div className="relative w-full h-full overflow-hidden cursor-pointer">
-          <img
-            key={resolvedFrontImage}
-            src={resolvedFrontImage}
-            alt={`${product.name} - ${selectedColor}`}
-            className={`w-full h-full object-cover object-top transition-all duration-700 ease-out ${
-              isHovered && product.backImage
-                ? 'opacity-0 scale-100 pointer-events-none'
-                : 'opacity-100 scale-100'
-            }`}
-            loading="lazy"
-          />
-          {product.backImage && (
-            <img
-              src={product.backImage}
-              alt={`${product.name} back view`}
-              className={`absolute inset-0 w-full h-full object-cover object-top transition-all duration-700 ease-out ${
-                isHovered
-                  ? 'opacity-100 scale-108'
-                  : 'opacity-0 scale-100 pointer-events-none'
-              }`}
-              loading="lazy"
-            />
-          )}
-        </div>
 
         {/* Quick Action Floating Bar on Hover */}
         <div className="absolute bottom-3 inset-x-3 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
@@ -135,7 +141,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, showCategory 
             <Eye size={16} className="group-hover/qv:scale-110 transition-transform duration-200" />
           </button>
         </div>
-      </Link>
+      </div>
 
       {/* Product Information */}
       <div className="pt-3 pb-2 flex flex-col font-satoshi">

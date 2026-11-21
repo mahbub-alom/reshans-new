@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Autoplay } from 'swiper/modules';
@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, Eye, Heart, ShoppingBag, Star } from 'lucide
 import { PRODUCTS } from '../../data/products';
 import { useShop } from '../../context/ShopContext';
 import { generateProductSlug } from '../../lib/utils';
+import { ProductSkeleton } from '../common/ProductSkeleton';
 
 interface TrendingCardItemProps {
   product: (typeof PRODUCTS)[0];
@@ -35,16 +36,37 @@ const TrendingCardItem: React.FC<TrendingCardItemProps> = ({ product }) => {
 
   return (
     <div className="group relative flex flex-col h-full bg-white rounded-xs transition-all duration-300">
-      {/* Thumbnail Image with Hover Swap - click navigates to details */}
-      <Link
-        href={productUrl}
-        onClick={handleProductClick}
-        className="relative aspect-[3/4] w-full overflow-hidden bg-gray-100 rounded-xs cursor-pointer block"
-      >
+      {/* Thumbnail Image with Hover Swap */}
+      <div className="relative aspect-[3/4] w-full overflow-hidden bg-gray-100 rounded-xs">
+        {/* Only clicking the image navigates to details */}
+        <Link
+          href={productUrl}
+          onClick={handleProductClick}
+          className="absolute inset-0 w-full h-full cursor-pointer block z-0"
+          aria-label={`View ${product.name}`}
+        >
+          {/* Main Image */}
+          <img
+            key={resolvedFrontImage}
+            src={resolvedFrontImage}
+            alt={`${product.name} - ${selectedColor}`}
+            className="w-full h-full object-cover object-center transition-all duration-700 ease-out"
+          />
+
+          {/* Secondary Image for Hover Swap with Smooth Zoom */}
+          {product.backImage && (
+            <img
+              src={product.backImage}
+              alt={`${product.name} alternate view`}
+              className="absolute inset-0 w-full h-full object-cover object-center opacity-0 group-hover:opacity-100 scale-100 group-hover:scale-108 transition-all duration-700 ease-out"
+            />
+          )}
+        </Link>
+
         {/* Discount Badge */}
         {product.badge && (
           <span
-            className={`absolute top-3 left-3 z-10 text-[10px] uppercase font-bold tracking-wider py-1 px-2 rounded-xs font-satoshi-bold shadow-xs ${
+            className={`absolute top-3 left-3 z-10 text-[10px] uppercase font-bold tracking-wider py-1 px-2 rounded-xs font-satoshi-bold shadow-xs pointer-events-none ${
               product.badge === 'sale'
                 ? 'bg-[#F9F295] text-[#093624]'
                 : 'bg-[#093624] text-[#F9F295]'
@@ -54,28 +76,13 @@ const TrendingCardItem: React.FC<TrendingCardItemProps> = ({ product }) => {
           </span>
         )}
 
-        {/* Main Image */}
-        <img
-          key={resolvedFrontImage}
-          src={resolvedFrontImage}
-          alt={`${product.name} - ${selectedColor}`}
-          className="w-full h-full object-cover object-center transition-all duration-700 ease-out"
-        />
-
-        {/* Secondary Image for Hover Swap with Smooth Zoom */}
-        {product.backImage && (
-          <img
-            src={product.backImage}
-            alt={`${product.name} alternate view`}
-            className="absolute inset-0 w-full h-full object-cover object-center opacity-0 group-hover:opacity-100 scale-100 group-hover:scale-108 transition-all duration-700 ease-out"
-          />
-        )}
-
         {/* Floating Action Buttons */}
         <div className="absolute right-3 top-3 z-20 flex flex-col gap-2 translate-x-3 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300">
           {/* Wishlist Button */}
           <button
+            type="button"
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
               toggleWishlist(product.id);
             }}
@@ -91,7 +98,9 @@ const TrendingCardItem: React.FC<TrendingCardItemProps> = ({ product }) => {
 
           {/* Quick View Button */}
           <button
+            type="button"
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
               openQuickView(product);
             }}
@@ -117,7 +126,7 @@ const TrendingCardItem: React.FC<TrendingCardItemProps> = ({ product }) => {
             <ShoppingBag size={16} />
           </button>
         </div>
-      </Link>
+      </div>
 
       {/* Product Details */}
       <div className="pt-4 pb-3 flex flex-col text-center items-center">
@@ -195,6 +204,15 @@ const TrendingCardItem: React.FC<TrendingCardItemProps> = ({ product }) => {
 export const TrendingProductsSection: React.FC = () => {
   const { products } = useShop();
   const swiperRef = useRef<SwiperType | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Show smooth skeleton placeholder on initial load / reload
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Trending products selection
   const trendingProducts = (products && products.length ? products : PRODUCTS).slice(0, 8);
@@ -218,65 +236,71 @@ export const TrendingProductsSection: React.FC = () => {
 
         {/* Carousel Wrapper with Left / Right Navigation Controls */}
         <div className="relative group/slider px-2 sm:px-6">
-          {/* Left Arrow Button */}
-          <button
-            onClick={() => swiperRef.current?.slidePrev()}
-            aria-label="Previous products"
-            className="absolute -left-2 sm:-left-3 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-white shadow-lg border border-gray-100 flex items-center justify-center text-[#141414] hover:bg-[#093624] hover:text-[#F9F295] transition-all duration-300 cursor-pointer active:scale-95 hover:scale-105"
-          >
-            <ChevronLeft size={20} />
-          </button>
+          {isLoading ? (
+            <ProductSkeleton count={4} />
+          ) : (
+            <>
+              {/* Left Arrow Button */}
+              <button
+                onClick={() => swiperRef.current?.slidePrev()}
+                aria-label="Previous products"
+                className="absolute -left-2 sm:-left-3 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-white shadow-lg border border-gray-100 flex items-center justify-center text-[#141414] hover:bg-[#093624] hover:text-[#F9F295] transition-all duration-300 cursor-pointer active:scale-95 hover:scale-105"
+              >
+                <ChevronLeft size={20} />
+              </button>
 
-          {/* Right Arrow Button */}
-          <button
-            onClick={() => swiperRef.current?.slideNext()}
-            aria-label="Next products"
-            className="absolute -right-2 sm:-right-3 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-white shadow-lg border border-gray-100 flex items-center justify-center text-[#141414] hover:bg-[#093624] hover:text-[#F9F295] transition-all duration-300 cursor-pointer active:scale-95 hover:scale-105"
-          >
-            <ChevronRight size={20} />
-          </button>
+              {/* Right Arrow Button */}
+              <button
+                onClick={() => swiperRef.current?.slideNext()}
+                aria-label="Next products"
+                className="absolute -right-2 sm:-right-3 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-white shadow-lg border border-gray-100 flex items-center justify-center text-[#141414] hover:bg-[#093624] hover:text-[#F9F295] transition-all duration-300 cursor-pointer active:scale-95 hover:scale-105"
+              >
+                <ChevronRight size={20} />
+              </button>
 
-          {/* Swiper Slider: 4 on desktop, 3 on laptop, 2 on tablet, 1 on mobile */}
-          <Swiper
-            onBeforeInit={(swiper) => {
-              swiperRef.current = swiper;
-            }}
-            modules={[Navigation, Autoplay]}
-            spaceBetween={24}
-            slidesPerView={1}
-            loop={true}
-            speed={800}
-            autoplay={{
-              delay: 3500,
-              disableOnInteraction: false,
-              pauseOnMouseEnter: true,
-            }}
-            breakpoints={{
-              1400: {
-                slidesPerView: 4,
-                spaceBetween: 28,
-              },
-              1024: {
-                slidesPerView: 3,
-                spaceBetween: 24,
-              },
-              640: {
-                slidesPerView: 2,
-                spaceBetween: 20,
-              },
-              0: {
-                slidesPerView: 1,
-                spaceBetween: 16,
-              },
-            }}
-            className="!pb-6 !overflow-visible"
-          >
-            {trendingProducts.map((product) => (
-              <SwiperSlide key={product.id}>
-                <TrendingCardItem product={product} />
-              </SwiperSlide>
-            ))}
-          </Swiper>
+              {/* Swiper Slider: 4 on desktop, 3 on laptop, 2 on tablet, 1 on mobile */}
+              <Swiper
+                onBeforeInit={(swiper) => {
+                  swiperRef.current = swiper;
+                }}
+                modules={[Navigation, Autoplay]}
+                spaceBetween={24}
+                slidesPerView={1}
+                loop={true}
+                speed={800}
+                autoplay={{
+                  delay: 3500,
+                  disableOnInteraction: false,
+                  pauseOnMouseEnter: true,
+                }}
+                breakpoints={{
+                  1400: {
+                    slidesPerView: 4,
+                    spaceBetween: 28,
+                  },
+                  1024: {
+                    slidesPerView: 3,
+                    spaceBetween: 24,
+                  },
+                  640: {
+                    slidesPerView: 2,
+                    spaceBetween: 20,
+                  },
+                  0: {
+                    slidesPerView: 1,
+                    spaceBetween: 16,
+                  },
+                }}
+                className="!pb-6 !overflow-visible"
+              >
+                {trendingProducts.map((product) => (
+                  <SwiperSlide key={product.id}>
+                    <TrendingCardItem product={product} />
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            </>
+          )}
         </div>
       </div>
     </section>

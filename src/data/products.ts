@@ -13,6 +13,7 @@ export const PRODUCTS: Product[] = [
     reviewsCount: 32,
     frontImage: '/assets/img/fashion-1/product/product-1/front-img-1.jpg',
     backImage: '/assets/img/fashion-1/product/product-1/back-img-1.jpg',
+    video: 'https://www.youtube.com/watch?v=5HPPywo7ukA',
     description: 'Designed with a textured waffle knit, this cozy crewneck sweater offers tailored warmth with everyday breathability.',
     sizes: ['S', 'M', 'L', 'XL'],
     colors: [

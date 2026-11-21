@@ -151,7 +151,14 @@ export const ContactPage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             {/* Left: Google Map embed */}
             <div className="lg:col-span-6 h-[420px] lg:h-[660px] rounded-xs overflow-hidden shadow-md border border-[#E0DCD9]">
-     <iframe src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d190.46062524942928!2d90.41110858973208!3d23.778060531534372!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e1!3m2!1sen!2sbd!4v1795288481449!5m2!1sen!2sbd" width="100%" height="100%" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+              <iframe
+                src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d190.46062524942928!2d90.41110858973208!3d23.778060531534372!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e1!3m2!1sen!2sbd!4v1795288481449!5m2!1sen!2sbd"
+                width="100%"
+                height="100%"
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="strict-origin-when-cross-origin"
+              />
             </div>
 
             {/* Right: Contact Form matching .aq-contact-us-wrap */}

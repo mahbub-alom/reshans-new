@@ -24,6 +24,8 @@ import {
   Ruler,
   ShoppingBag,
   ArrowRight,
+  Play,
+  Video as VideoIcon,
 } from 'lucide-react';
 
 interface ProductDetailsPageProps {
@@ -57,20 +59,39 @@ export const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({ productI
       return false;
     }) || products[0] || PRODUCTS[0];
 
-  // Gallery Images - include color variant images if available
+  // Gallery Media Items (Images + Video if provided)
   const colorVariantImages = (product.colors || [])
     .map((c) => c.image)
     .filter((img): img is string => Boolean(img));
 
-  const galleryImages = [
+  const uniqueImageUrls = [
     product.frontImage,
     product.backImage || product.frontImage,
     ...colorVariantImages,
   ].filter((img, idx, arr) => arr.indexOf(img) === idx);
 
+  interface MediaItem {
+    type: 'image' | 'video';
+    url: string;
+    thumb: string;
+  }
+
+  const galleryMedia: MediaItem[] = [
+    ...uniqueImageUrls.map((url) => ({ type: 'image' as const, url, thumb: url })),
+    ...(product.video
+      ? [
+          {
+            type: 'video' as const,
+            url: product.video,
+            thumb: product.frontImage,
+          },
+        ]
+      : []),
+  ];
+
   const availableSizes = product.sizes && product.sizes.length > 0 ? product.sizes : ['XS', 'S', 'M', 'L', 'XL'];
 
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState(availableSizes[0] || 'M');
   const [selectedColor, setSelectedColor] = useState(
     product.colors[0]?.name || 'Default'
@@ -85,7 +106,7 @@ export const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({ productI
 
   useEffect(() => {
     const nextSizes = product.sizes && product.sizes.length > 0 ? product.sizes : ['XS', 'S', 'M', 'L', 'XL'];
-    setActiveImageIndex(0);
+    setActiveMediaIndex(0);
     setSelectedSize(nextSizes[0] || 'M');
     setSelectedColor(product.colors[0]?.name || 'Default');
     setQuantity(1);
@@ -144,11 +165,11 @@ export const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({ productI
   const relatedProducts = products.filter((p) => p.id !== product.id).slice(0, 4);
 
   const handlePrevImage = () => {
-    setActiveImageIndex((prev) => (prev === 0 ? galleryImages.length - 1 : prev - 1));
+    setActiveMediaIndex((prev) => (prev === 0 ? galleryMedia.length - 1 : prev - 1));
   };
 
   const handleNextImage = () => {
-    setActiveImageIndex((prev) => (prev === galleryImages.length - 1 ? 0 : prev + 1));
+    setActiveMediaIndex((prev) => (prev === galleryMedia.length - 1 ? 0 : prev + 1));
   };
 
   const handleAddToCart = () => {
@@ -219,38 +240,59 @@ export const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({ productI
               <div className="flex flex-col-reverse sm:flex-row gap-4">
                 {/* Thumbnails (vertical column) */}
                 <div className="flex sm:flex-col gap-3 overflow-x-auto sm:overflow-visible shrink-0 no-scrollbar">
-                  {galleryImages.map((img, idx) => (
+                  {galleryMedia.map((media, idx) => (
                     <button
                       key={idx}
-                      onClick={() => setActiveImageIndex(idx)}
-                      className={`w-20 h-24 sm:w-22 sm:h-28 rounded-xs overflow-hidden bg-[#F7F7F7] border transition-all shrink-0 cursor-pointer ${
-                        activeImageIndex === idx
+                      onClick={() => setActiveMediaIndex(idx)}
+                      className={`relative w-20 h-24 sm:w-22 sm:h-28 rounded-xs overflow-hidden bg-[#F7F7F7] border transition-all shrink-0 cursor-pointer group/thumb ${
+                        activeMediaIndex === idx
                           ? 'border-[#093624] ring-2 ring-[#093624]/20'
                           : 'border-transparent opacity-70 hover:opacity-100 hover:border-gray-300'
                       }`}
                     >
                       <img
-                        src={img}
+                        src={media.thumb}
                         alt={`${product.name} thumb ${idx + 1}`}
                         className="w-full h-full object-cover object-top"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = product.frontImage;
                         }}
                       />
+                      {media.type === 'video' && (
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white">
+                          <div className="w-7 h-7 rounded-full bg-[#093624] text-[#F9F295] flex items-center justify-center shadow">
+                            <Play size={12} className="fill-[#F9F295] translate-x-0.5" />
+                          </div>
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
 
-                {/* Main Large Image Display */}
+                {/* Main Large Display (Image or Video) */}
                 <div className="flex-1 relative aspect-[3/4] bg-[#F7F7F7] rounded-xs overflow-hidden border border-gray-100 group">
-                  <img
-                    src={galleryImages[activeImageIndex]}
-                    alt={product.name}
-                    className="w-full h-full object-cover object-top transition-all duration-500 group-hover:scale-105"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = product.frontImage;
-                    }}
-                  />
+                  {galleryMedia[activeMediaIndex]?.type === 'video' ? (
+                    <div className="relative w-full h-full bg-black flex items-center justify-center">
+                      <video
+                        key={galleryMedia[activeMediaIndex].url}
+                        src={galleryMedia[activeMediaIndex].url}
+                        controls
+                        autoPlay
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <img
+                      src={galleryMedia[activeMediaIndex]?.url || product.frontImage}
+                      alt={product.name}
+                      className="w-full h-full object-cover object-top transition-all duration-500 group-hover:scale-105"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = product.frontImage;
+                      }}
+                    />
+                  )}
 
                   {/* Badges */}
                   <div className="absolute top-4 left-4 z-10 flex flex-col gap-1.5 pointer-events-none">
@@ -259,29 +301,36 @@ export const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({ productI
                         {product.discount}
                       </span>
                     )}
+                    {galleryMedia[activeMediaIndex]?.type === 'video' && (
+                      <span className="bg-[#141414] text-white text-[10px] font-bold font-satoshi-bold px-2 py-0.5 rounded-xs uppercase tracking-wider flex items-center gap-1">
+                        <VideoIcon size={12} /> Video
+                      </span>
+                    )}
                   </div>
 
                   {/* Zoom Preview Trigger */}
-                  <button
-                    onClick={() => setIsImageLightboxOpen(true)}
-                    className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-white/90 hover:bg-[#093624] hover:text-[#F9F295] flex items-center justify-center text-[#141414] shadow-md transition-all cursor-pointer opacity-0 group-hover:opacity-100"
-                    title="Zoom Image"
-                  >
-                    <Maximize2 size={16} />
-                  </button>
+                  {galleryMedia[activeMediaIndex]?.type === 'image' && (
+                    <button
+                      onClick={() => setIsImageLightboxOpen(true)}
+                      className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-white/90 hover:bg-[#093624] hover:text-[#F9F295] flex items-center justify-center text-[#141414] shadow-md transition-all cursor-pointer opacity-0 group-hover:opacity-100"
+                      title="Zoom Image"
+                    >
+                      <Maximize2 size={16} />
+                    </button>
+                  )}
 
                   {/* Prev / Next Arrows */}
                   <button
                     onClick={handlePrevImage}
                     className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/90 hover:bg-[#093624] hover:text-[#F9F295] flex items-center justify-center text-[#141414] shadow-md transition-all cursor-pointer opacity-0 group-hover:opacity-100"
-                    aria-label="Previous image"
+                    aria-label="Previous media"
                   >
                     <ChevronLeft size={20} />
                   </button>
                   <button
                     onClick={handleNextImage}
                     className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/90 hover:bg-[#093624] hover:text-[#F9F295] flex items-center justify-center text-[#141414] shadow-md transition-all cursor-pointer opacity-0 group-hover:opacity-100"
-                    aria-label="Next image"
+                    aria-label="Next media"
                   >
                     <ChevronRight size={20} />
                   </button>
@@ -433,9 +482,11 @@ export const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({ productI
                           onClick={() => {
                             setSelectedColor(c.name);
                             if (c.image) {
-                              const imgIdx = galleryImages.indexOf(c.image);
+                              const imgIdx = galleryMedia.findIndex(
+                                (m) => m.type === 'image' && m.url === c.image
+                              );
                               if (imgIdx !== -1) {
-                                setActiveImageIndex(imgIdx);
+                                setActiveMediaIndex(imgIdx);
                               }
                             }
                           }}
@@ -509,19 +560,6 @@ export const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({ productI
                     title="Save to Wishlist"
                   >
                     <Heart size={18} className={inWishlist ? 'fill-[#F9F295]' : ''} />
-                  </button>
-
-                  {/* Compare Button */}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      showToast(`${product.name} added to comparison matrix.`)
-                    }
-                    aria-label="Compare"
-                    className="h-12 w-12 rounded-xs border border-gray-200 bg-white text-[#141414] hover:border-[#093624] hover:text-[#093624] flex items-center justify-center transition-all cursor-pointer shrink-0"
-                    title="Compare Product"
-                  >
-                    <RotateCcw size={18} />
                   </button>
                 </div>
 
@@ -1094,7 +1132,7 @@ export const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({ productI
             <X size={24} />
           </button>
           <img
-            src={galleryImages[activeImageIndex]}
+            src={galleryMedia[activeMediaIndex]?.url || product.frontImage}
             alt={product.name}
             className="max-h-[90vh] max-w-[90vw] object-contain rounded-xs shadow-2xl"
           />
