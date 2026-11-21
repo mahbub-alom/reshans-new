@@ -166,19 +166,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           </button>
         </div>
 
-        {/* Quick View Store Action */}
-        <div className="p-3 border-b border-white/15">
-          <button
-            onClick={() => navigate('/')}
-            className="w-full flex items-center justify-between px-3 py-2 bg-white/10 hover:bg-[#F9F295] text-white hover:text-[#093624] rounded-xs transition-all text-xs font-satoshi-bold uppercase tracking-wider group cursor-pointer"
-          >
-            <span className="flex items-center gap-2">
-              <ExternalLink size={14} className="group-hover:translate-x-0.5 transition-transform" />
-              <span>View Public Store</span>
-            </span>
-            <ChevronRight size={14} className="opacity-60 group-hover:opacity-100" />
-          </button>
-        </div>
 
         {/* Navigation Items (Scrollable) */}
         <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1 custom-scrollbar">

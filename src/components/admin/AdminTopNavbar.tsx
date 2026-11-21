@@ -139,20 +139,9 @@ export const AdminTopNavbar: React.FC<AdminTopNavbarProps> = ({
 
         {/* Right: Actions, Currency, Notifications, User */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          {/* Currency Indicator */}
-          <div className="hidden sm:flex items-center px-2.5 py-1 bg-[#F9F295]/50 border border-[#093624]/25 rounded-xs text-[#093624] text-[11px] font-satoshi-bold">
-            <span>BDT (৳)</span>
-          </div>
+      
 
-          {/* Quick Store Link Button */}
-          <button
-            onClick={() => navigate('/')}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#093624] hover:opacity-90 text-[#F9F295] rounded-xs text-xs font-satoshi-bold uppercase tracking-wider transition-opacity cursor-pointer"
-          >
-            <ExternalLink size={13} />
-            <span>Storefront</span>
-          </button>
-
+       
           {/* Notification Center Dropdown */}
           <div className="relative">
             <button

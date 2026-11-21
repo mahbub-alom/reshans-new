@@ -804,32 +804,7 @@ export const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({ productI
                   </div>
                 </div>
 
-                {/* Right: Verified Buyer Policy Notice */}
-                <div className="md:col-span-7 border-t md:border-t-0 md:border-l border-gray-100 md:pl-8 flex flex-col justify-center">
-                  <div className="p-6 bg-[#FAF9F8] border border-[#EBEBEB] rounded-xs space-y-3">
-                    <div className="flex items-center gap-2.5 text-[#093624]">
-                      <ShieldCheck size={20} className="shrink-0" />
-                      <h4 className="text-sm font-bold font-satoshi-bold text-[#141414]">
-                        Verified Buyer Reviews Only
-                      </h4>
-                    </div>
-                    <p className="text-xs text-[#55585B] leading-relaxed">
-                      To ensure genuine quality feedback, product reviews can only be submitted by customers who have purchased and physically received this item in hand.
-                    </p>
-                    <div className="pt-2 border-t border-gray-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                      <span className="text-[#7A7A7A]">
-                        Received this item? Review from your dashboard:
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => navigate('/dashboard/reviews')}
-                        className="px-4 py-2 bg-[#093624] text-[#F9F295] font-bold font-satoshi-bold uppercase text-[11px] tracking-wider rounded-xs hover:bg-[#052216] transition-colors cursor-pointer w-fit shrink-0"
-                      >
-                        Go to Dashboard Reviews
-                      </button>
-                    </div>
-                  </div>
-                </div>
+               
               </div>
 
               {/* Review Items List */}

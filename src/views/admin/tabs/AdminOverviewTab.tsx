@@ -16,6 +16,7 @@ import {
   Plus,
   Tag,
   Star,
+  Banknote,
 } from 'lucide-react';
 import { useShop } from '../../../context/ShopContext';
 import { AdminTab } from '../../../components/admin/AdminSidebar';
@@ -65,16 +66,13 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ setActiveTab
               Total Revenue
             </span>
             <div className="w-9 h-9 rounded-xs bg-[#093624]/10 text-[#093624] flex items-center justify-center">
-              <DollarSign size={18} />
+              <Banknote size={18} />
             </div>
           </div>
           <div className="text-2xl font-bold font-satoshi-bold text-[#141414] tabular-nums mb-2">
             {formatPrice(totalRevenue)}
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-[#093624] font-satoshi-bold">
-            <ArrowUpRight size={14} />
-            <span>+18.4% vs last month</span>
-          </div>
+        
         </div>
 
         {/* Card 2: Total Orders */}
@@ -90,12 +88,7 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ setActiveTab
           <div className="text-2xl font-bold font-satoshi-bold text-[#141414] tabular-nums mb-2">
             {348 + orders.length}
           </div>
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-[#093624] font-satoshi-bold">
-              {pendingOrders.length} pending fulfillment
-            </span>
-            <span className="text-gray-400 font-satoshi">Dhaka & Region</span>
-          </div>
+        
         </div>
 
         {/* Card 3: Active Customers */}
@@ -111,10 +104,7 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ setActiveTab
           <div className="text-2xl font-bold font-satoshi-bold text-[#141414] tabular-nums mb-2">
             {1840 + customers.length}
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-[#093624] font-satoshi-bold">
-            <ArrowUpRight size={14} />
-            <span>+24.1% repeat buyers</span>
-          </div>
+          
         </div>
 
         {/* Card 4: Catalog Products */}
@@ -130,22 +120,7 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ setActiveTab
           <div className="text-2xl font-bold font-satoshi-bold text-[#141414] tabular-nums mb-2">
             {products.length} Items
           </div>
-          <div className="flex items-center justify-between text-xs">
-            {lowStockProducts.length > 0 ? (
-              <span className="text-[#093624] font-satoshi-bold flex items-center gap-1">
-                <AlertCircle size={12} />
-                {lowStockProducts.length} low stock
-              </span>
-            ) : (
-              <span className="text-[#093624] font-satoshi-bold">All items stocked</span>
-            )}
-            <button
-              onClick={() => setActiveTab('inventory')}
-              className="text-[#093624] font-satoshi-bold hover:underline cursor-pointer"
-            >
-              Inspect
-            </button>
-          </div>
+          
         </div>
       </div>
 
@@ -156,7 +131,7 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ setActiveTab
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
             <div>
               <h3 className="text-base font-bold font-satoshi-bold text-[#141414] flex items-center gap-2">
-                <TrendingUp size={18} className="text-[#093624]" />
+          
                 <span>Revenue Performance (BDT ৳)</span>
               </h3>
               <p className="text-xs text-brand-body font-satoshi mt-0.5">
@@ -415,42 +390,7 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ setActiveTab
             </div>
           </div>
 
-          {/* Quick Management Shortcuts */}
-          <div className="bg-[#093624] text-white rounded-xs p-5 shadow-2xs">
-            <h4 className="text-xs font-satoshi-bold uppercase tracking-wider text-[#F9F295] mb-3">
-              Admin Quick Actions
-            </h4>
-            <div className="grid grid-cols-2 gap-2.5">
-              <button
-                onClick={() => setActiveTab('products')}
-                className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xs text-left text-xs font-satoshi-bold transition-colors cursor-pointer flex items-center gap-2"
-              >
-                <Plus size={14} className="text-[#F9F295]" />
-                <span>Add Product</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('coupons')}
-                className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xs text-left text-xs font-satoshi-bold transition-colors cursor-pointer flex items-center gap-2"
-              >
-                <Tag size={14} className="text-[#F9F295]" />
-                <span>New Coupon</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('banners')}
-                className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xs text-left text-xs font-satoshi-bold transition-colors cursor-pointer flex items-center gap-2"
-              >
-                <TrendingUp size={14} className="text-[#F9F295]" />
-                <span>Edit Banners</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('reviews')}
-                className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xs text-left text-xs font-satoshi-bold transition-colors cursor-pointer flex items-center gap-2"
-              >
-                <Star size={14} className="text-[#F9F295]" />
-                <span>Reviews</span>
-              </button>
-            </div>
-          </div>
+         
         </div>
       </div>
     </div>
