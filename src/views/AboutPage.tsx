@@ -3,7 +3,7 @@
 import React from 'react';
 import { useShop } from '../context/ShopContext';
 import { Button } from '../components/common/Button';
-import { ArrowRight, Check, Sparkles, Shield, Clock, RotateCcw, CreditCard, Truck } from 'lucide-react';
+import { ArrowRight, Check, Sparkles, Shield, Clock, RotateCcw, CreditCard, Truck, Feather, Wind } from 'lucide-react';
 
 export const AboutPage: React.FC = () => {
   const { navigate } = useShop();
@@ -82,7 +82,7 @@ export const AboutPage: React.FC = () => {
             {/* Feature 1 */}
             <div className="p-8 bg-[#F9F9F9] rounded-xs border border-[#F0EDED] hover:shadow-md transition-shadow">
               <div className="w-14 h-14 mx-auto mb-5 rounded-full bg-[#093624]/10 text-[#093624] flex items-center justify-center">
-                <Sparkles size={26} />
+                <Feather size={24} />
               </div>
               <h4 className="text-xl font-bold font-satoshi-bold text-[#141414] mb-3">Soft Fabric</h4>
               <p className="text-sm text-[#6D6868] leading-relaxed font-satoshi">
@@ -93,7 +93,7 @@ export const AboutPage: React.FC = () => {
             {/* Feature 2 */}
             <div className="p-8 bg-[#F9F9F9] rounded-xs border border-[#F0EDED] hover:shadow-md transition-shadow">
               <div className="w-14 h-14 mx-auto mb-5 rounded-full bg-[#093624]/10 text-[#093624] flex items-center justify-center">
-                <Shield size={26} />
+                <Wind size={24} />
               </div>
               <h4 className="text-xl font-bold font-satoshi-bold text-[#141414] mb-3">Lightweight</h4>
               <p className="text-sm text-[#6D6868] leading-relaxed font-satoshi">
