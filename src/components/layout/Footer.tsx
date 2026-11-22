@@ -5,9 +5,14 @@ import { useShop } from '../../context/ShopContext';
 import { Facebook, Instagram, Linkedin, Twitter } from 'lucide-react';
 
 export const Footer: React.FC = () => {
-  const { openWishlist, openAuth, openCart, navigate } = useShop();
+  const { openWishlist, openAuth, openCart, navigate, settings } = useShop();
   const [email, setEmail] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(false);
+
+  const displayEmail = settings.email || 'Reshans@gmail.com';
+  const displayPhone = settings.phone || '+880 1977 378 642';
+  const telLink = displayPhone.replace(/[^0-9+]/g, '');
+  const displayAddress = settings.address || '73/A, Gulshan 2, Dhaka 1212, Bangladesh';
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,8 +49,8 @@ export const Footer: React.FC = () => {
                     />
                   </svg>
                 </span>
-                <a href="mailto:Reshans@gmail.com" className="hover:text-[#093624] transition-colors">
-                  Reshans@gmail.com
+                <a href={`mailto:${displayEmail}`} className="hover:text-[#093624] transition-colors">
+                  {displayEmail}
                 </a>
               </div>
 
@@ -66,18 +71,17 @@ export const Footer: React.FC = () => {
                   </svg>
                 </span>
                 <span>
-                  73/A, Gulshan 2 <br /> Dhaka 1212, Bangladesh
+                  {displayAddress}
                 </span>
               </div>
 
               {/* Telephone matching bold fs-bold */}
               <div className="pt-1">
                 <a
-                  href="tel:+8801700000000"
+                  href={`tel:${telLink}`}
                   className="text-[22px] font-bold text-[#141414] hover:text-[#093624] font-satoshi-bold transition-colors block"
                 >
-                
-                  +880 1977 378 642
+                  {displayPhone}
                 </a>
               </div>
             </div>
@@ -213,48 +217,75 @@ export const Footer: React.FC = () => {
   </h5>
   <div className="flex items-center gap-2">
     {/* Facebook */}
-    <a
-      href="https://facebook.com"
-      target="_blank"
-      rel="noreferrer"
-      aria-label="Facebook"
-      className="w-[38px] h-[38px] bg-white text-[#141414] hover:text-white hover:bg-[#093624] shadow-[0_1px_4px_rgba(20,20,20,0.1)] flex items-center justify-center transition-all duration-300 rounded-none cursor-pointer"
-    >
-      <Facebook className="w-4 h-4" />
-    </a>
-
-    {/* Twitter / X */}
-    <a
-      href="https://twitter.com"
-      target="_blank"
-      rel="noreferrer"
-      aria-label="Twitter"
-      className="w-[38px] h-[38px] bg-white text-[#141414] hover:text-white hover:bg-[#093624] shadow-[0_1px_4px_rgba(20,20,20,0.1)] flex items-center justify-center transition-all duration-300 rounded-none cursor-pointer"
-    >
-      <Twitter className="w-4 h-4" />
-    </a>
-
-    {/* LinkedIn */}
-    <a
-      href="https://linkedin.com"
-      target="_blank"
-      rel="noreferrer"
-      aria-label="LinkedIn"
-      className="w-[38px] h-[38px] bg-white text-[#141414] hover:text-white hover:bg-[#093624] shadow-[0_1px_4px_rgba(20,20,20,0.1)] flex items-center justify-center transition-all duration-300 rounded-none cursor-pointer"
-    >
-      <Linkedin className="w-4 h-4" />
-    </a>
+    {settings.facebook && (
+      <a
+        href={settings.facebook}
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Facebook"
+        className="w-[38px] h-[38px] bg-white text-[#141414] hover:text-white hover:bg-[#093624] shadow-[0_1px_4px_rgba(20,20,20,0.1)] flex items-center justify-center transition-all duration-300 rounded-none cursor-pointer"
+      >
+        <Facebook className="w-4 h-4" />
+      </a>
+    )}
 
     {/* Instagram */}
-    <a
-      href="https://instagram.com"
-      target="_blank"
-      rel="noreferrer"
-      aria-label="Instagram"
-      className="w-[38px] h-[38px] bg-white text-[#141414] hover:text-white hover:bg-[#093624] shadow-[0_1px_4px_rgba(20,20,20,0.1)] flex items-center justify-center transition-all duration-300 rounded-none cursor-pointer"
-    >
-      <Instagram className="w-4 h-4" />
-    </a>
+    {settings.instagram && (
+      <a
+        href={settings.instagram}
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Instagram"
+        className="w-[38px] h-[38px] bg-white text-[#141414] hover:text-white hover:bg-[#093624] shadow-[0_1px_4px_rgba(20,20,20,0.1)] flex items-center justify-center transition-all duration-300 rounded-none cursor-pointer"
+      >
+        <Instagram className="w-4 h-4" />
+      </a>
+    )}
+
+    {/* TikTok */}
+    {settings.tiktok && (
+      <a
+        href={settings.tiktok}
+        target="_blank"
+        rel="noreferrer"
+        aria-label="TikTok"
+        title="Follow us on TikTok"
+        className="w-[38px] h-[38px] bg-white text-[#141414] hover:text-white hover:bg-[#093624] shadow-[0_1px_4px_rgba(20,20,20,0.1)] flex items-center justify-center transition-all duration-300 rounded-none cursor-pointer"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          fill="currentColor"
+          viewBox="0 0 16 16"
+          className="w-4 h-4"
+        >
+          <path d="M9 0h1.98c.144.715.54 1.617 1.235 2.512C12.895 3.389 13.797 4 15 4v2c-1.753 0-3.07-.814-4-1.829V11a5 5 0 1 1-5-5v2a3 3 0 1 0 3 3V0Z" />
+        </svg>
+      </a>
+    )}
+
+    {/* YouTube */}
+    {settings.youtube && (
+      <a
+        href={settings.youtube}
+        target="_blank"
+        rel="noreferrer"
+        aria-label="YouTube"
+        className="w-[38px] h-[38px] bg-white text-[#141414] hover:text-white hover:bg-[#093624] shadow-[0_1px_4px_rgba(20,20,20,0.1)] flex items-center justify-center transition-all duration-300 rounded-none cursor-pointer"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          fill="currentColor"
+          viewBox="0 0 16 16"
+          className="w-4 h-4"
+        >
+          <path d="M8.051 1.999h.089c.822.003 4.987.033 6.11.335a2.01 2.01 0 0 1 1.415 1.42c.101.38.172.883.22 1.402l.01.104.022.26.008.104c.065.914.073 1.77.074 1.957v.075c-.001.194-.01 1.108-.082 2.06l-.008.105-.022.26-.01.104c-.048.519-.119 1.023-.22 1.402a2.007 2.007 0 0 1-1.415 1.42c-1.16.312-5.569.334-6.18.335h-.142c-.309 0-1.587-.006-2.927-.052l-.17-.006-.087-.004-.171-.007-.171-.007c-1.11-.049-2.167-.128-2.654-.26a2.007 2.007 0 0 1-1.415-1.419c-.111-.417-.185-.986-.235-1.558L.09 9.82l-.008-.104A31.4 31.4 0 0 1 0 7.68v-.123c.002-.215.01-.958.064-1.778l.007-.103.003-.052.008-.104.022-.26.01-.104c.048-.519.119-1.023.22-1.402a2.007 2.007 0 0 1 1.415-1.42c.487-.13 1.544-.21 2.654-.26l.17-.007.172-.006.086-.003.171-.007A99.788 99.788 0 0 1 7.858 2h.193zM6.4 5.209v5.582l4.88-2.791L6.4 5.209z"/>
+        </svg>
+      </a>
+    )}
   </div>
 </div>
           </div>

@@ -216,6 +216,22 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
 
+  // Fetch global store settings dynamically from database on load
+  useEffect(() => {
+    const fetchStoreSettings = async () => {
+      try {
+        const res = await fetch('/api/settings');
+        const data = await res.json();
+        if (data.success && data.settings) {
+          setSettings((prev) => ({ ...prev, ...data.settings }));
+        }
+      } catch (err) {
+        console.warn('Could not fetch settings from API, using defaults:', err);
+      }
+    };
+    fetchStoreSettings();
+  }, []);
+
   // Validate session on mount
   useEffect(() => {
     const checkCurrentSession = async () => {
@@ -963,9 +979,29 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Admin Settings & Profile
-  const updateSettings = (newSettings: Partial<WebsiteSettings>) => {
+  const updateSettings = async (newSettings: Partial<WebsiteSettings>) => {
     setSettings((prev) => ({ ...prev, ...newSettings }));
-    showToast(`Store settings saved!`);
+    try {
+      const storedToken = authToken || (typeof window !== 'undefined' ? localStorage.getItem('reshans_auth_token') : null);
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(storedToken ? { Authorization: `Bearer ${storedToken}` } : {}),
+        },
+        credentials: 'include',
+        body: JSON.stringify(newSettings),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Store settings saved to database!');
+      } else {
+        showToast(data.error || 'Failed to save settings to database');
+      }
+    } catch (err: any) {
+      console.error('Error saving settings to API:', err);
+      showToast('Store settings saved locally!');
+    }
   };
 
   const updateAdminProfile = (prof: Partial<AdminProfile>) => {

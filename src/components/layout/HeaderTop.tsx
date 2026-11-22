@@ -5,11 +5,15 @@ import { Phone, ChevronDown, Instagram } from 'lucide-react';
 import { useShop } from '../../context/ShopContext';
 
 export const HeaderTop: React.FC = () => {
-  const { openAuth, navigate, currentUser, isAuthenticated, isAdmin, logoutUser } = useShop();
+  const { openAuth, navigate, currentUser, isAuthenticated, isAdmin, logoutUser, settings } = useShop();
   const [lang, setLang] = useState('English');
   const [curr, setCurr] = useState('BDT');
   const [isLangOpen, setIsLangOpen] = useState(false);
   const [isCurrOpen, setIsCurrOpen] = useState(false);
+
+  const instagramUrl = settings.instagram || 'https://instagram.com/reshansfashion';
+  const displayPhone = settings.phone || '+880 1977 378 642';
+  const telLink = displayPhone.replace(/[^0-9+]/g, '');
 
   return (
     <div className="bg-[#093624] text-white text-[12px] py-2.5 border-b border-[#0d4a32] relative z-40">
@@ -17,15 +21,19 @@ export const HeaderTop: React.FC = () => {
         <div className="flex items-center justify-between">
           {/* Left: Followers & Telephone */}
           <div className="hidden lg:flex items-center gap-6">
-            <div className="flex items-center gap-2 text-white/80 hover:text-white transition-colors cursor-pointer">
+            <a
+              href={instagramUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-2 text-white/80 hover:text-white transition-colors cursor-pointer"
+            >
               <Instagram size={14} className="text-[#F9F295]" />
               <span className="font-satoshi-med">500k Followers</span>
-            </div>
+            </a>
             <div className="flex items-center gap-2 text-white/80 hover:text-white transition-colors">
               <Phone size={13} className="text-[#F9F295]" />
-              
-              <a href="tel:01977378642" className="font-satoshi-med hover:underline">
-                +880 1977 378 642
+              <a href={`tel:${telLink}`} className="font-satoshi-med hover:underline">
+                {displayPhone}
               </a>
             </div>
           </div>

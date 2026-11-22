@@ -247,7 +247,7 @@ export const AdminSettingsTab: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="block font-satoshi-bold uppercase tracking-wider text-brand-body mb-1">
               Facebook Page
@@ -256,18 +256,33 @@ export const AdminSettingsTab: React.FC = () => {
               type="text"
               value={formData.facebook}
               onChange={(e) => setFormData({ ...formData, facebook: e.target.value })}
+              placeholder="https://facebook.com/..."
               className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs focus:outline-none focus:border-[#093624]"
             />
           </div>
 
           <div>
             <label className="block font-satoshi-bold uppercase tracking-wider text-brand-body mb-1">
-              Instagram Handle
+              Instagram Handle / URL
             </label>
             <input
               type="text"
               value={formData.instagram}
               onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
+              placeholder="https://instagram.com/..."
+              className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs focus:outline-none focus:border-[#093624]"
+            />
+          </div>
+
+          <div>
+            <label className="block font-satoshi-bold uppercase tracking-wider text-brand-body mb-1">
+              TikTok Profile URL
+            </label>
+            <input
+              type="text"
+              value={formData.tiktok || ''}
+              onChange={(e) => setFormData({ ...formData, tiktok: e.target.value })}
+              placeholder="https://tiktok.com/@..."
               className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs focus:outline-none focus:border-[#093624]"
             />
           </div>
@@ -280,6 +295,7 @@ export const AdminSettingsTab: React.FC = () => {
               type="text"
               value={formData.youtube}
               onChange={(e) => setFormData({ ...formData, youtube: e.target.value })}
+              placeholder="https://youtube.com/@..."
               className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs focus:outline-none focus:border-[#093624]"
             />
           </div>

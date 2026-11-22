@@ -18,6 +18,7 @@ export const OffcanvasMenu: React.FC = () => {
     activeCategoryFilter,
     isAuthenticated,
     isAdmin,
+    settings,
   } = useShop();
 
   const handleAccountClick = () => {
@@ -335,23 +336,36 @@ export const OffcanvasMenu: React.FC = () => {
           <div className="p-6 bg-gray-50 border-t border-gray-100 space-y-3 text-xs text-[#55585B] font-satoshi">
             <div className="flex items-center gap-2.5">
               <Phone size={14} className="text-[#093624]" />
-              <a href="tel:01700000000" className="font-semibold text-[#141414] font-satoshi-bold">
-                +880 1700 000 000
+              <a
+                href={`tel:${(settings.phone || '+880 1977 378 642').replace(/[^0-9+]/g, '')}`}
+                className="font-semibold text-[#141414] font-satoshi-bold hover:underline"
+              >
+                {settings.phone || '+880 1977 378 642'}
               </a>
             </div>
             <div className="flex items-center gap-2.5">
               <Mail size={14} className="text-[#093624]" />
-              <span>Reshans@gmail.com</span>
+              <a
+                href={`mailto:${settings.email || 'Reshans@gmail.com'}`}
+                className="hover:underline hover:text-[#093624]"
+              >
+                {settings.email || 'Reshans@gmail.com'}
+              </a>
             </div>
             <div className="flex items-center gap-2.5">
               <MapPin size={14} className="text-[#093624]" />
-              <span>Gulshan 2, Dhaka, Bangladesh</span>
+              <span>{settings.address || 'Gulshan 2, Dhaka, Bangladesh'}</span>
             </div>
 
             <div className="pt-3 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-[#093624]">
+              <a
+                href={settings.instagram || 'https://instagram.com'}
+                target="_blank"
+                rel="noreferrer"
+                className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-[#093624] hover:bg-[#093624] hover:text-[#F9F295] transition-colors"
+              >
                 <Instagram size={14} />
-              </div>
+              </a>
               <span className="text-xs font-semibold text-[#093624] font-satoshi-bold">500k Followers</span>
             </div>
           </div>

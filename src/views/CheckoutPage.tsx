@@ -720,81 +720,85 @@ export const CheckoutPage: React.FC = () => {
                 {/* Payment Method Options */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Option A: bKash */}
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('bKash')}
-                    className={`p-4 rounded-xs border text-left transition-all cursor-pointer flex items-start gap-3 ${
-                      paymentMethod === 'bKash'
-                        ? 'border-[#093624] bg-[#093624] text-[#F9F295] shadow-xs'
-                        : 'border-gray-200 bg-white text-[#141414] hover:border-[#093624]'
-                    }`}
-                  >
-                    <div
-                      className={`w-10 h-10 rounded-xs flex items-center justify-center shrink-0 ${
+                  {(settings.paymentBkash !== false) && (
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('bKash')}
+                      className={`p-4 rounded-xs border text-left transition-all cursor-pointer flex items-start gap-3 ${
                         paymentMethod === 'bKash'
-                          ? 'bg-[#F9F295] text-[#093624]'
-                          : 'bg-[#F1EFEE] text-[#093624]'
+                          ? 'border-[#093624] bg-[#093624] text-[#F9F295] shadow-xs'
+                          : 'border-gray-200 bg-white text-[#141414] hover:border-[#093624]'
                       }`}
                     >
-                      <Smartphone size={18} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-bold font-satoshi-bold">bKash</span>
-                        {paymentMethod === 'bKash' && <Check size={16} />}
-                      </div>
-                      <p
-                        className={`text-xs mt-0.5 ${
-                          paymentMethod === 'bKash' ? 'text-white/85' : 'text-[#6D6868]'
+                      <div
+                        className={`w-10 h-10 rounded-xs flex items-center justify-center shrink-0 ${
+                          paymentMethod === 'bKash'
+                            ? 'bg-[#F9F295] text-[#093624]'
+                            : 'bg-[#F1EFEE] text-[#093624]'
                         }`}
                       >
-                        Instant mobile wallet payment
-                      </p>
-                    </div>
-                  </button>
+                        <Smartphone size={18} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-bold font-satoshi-bold">bKash</span>
+                          {paymentMethod === 'bKash' && <Check size={16} />}
+                        </div>
+                        <p
+                          className={`text-xs mt-0.5 ${
+                            paymentMethod === 'bKash' ? 'text-white/85' : 'text-[#6D6868]'
+                          }`}
+                        >
+                          Instant mobile wallet payment
+                        </p>
+                      </div>
+                    </button>
+                  )}
 
                   {/* Option B: Cash on Delivery */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPaymentMethod('Cash on Delivery');
-                      setErrors((prev) => ({
-                        ...prev,
-                        bkashNumber: undefined,
-                        bkashTransactionId: undefined,
-                      }));
-                    }}
-                    className={`p-4 rounded-xs border text-left transition-all cursor-pointer flex items-start gap-3 ${
-                      paymentMethod === 'Cash on Delivery'
-                        ? 'border-[#093624] bg-[#093624] text-[#F9F295] shadow-xs'
-                        : 'border-gray-200 bg-white text-[#141414] hover:border-[#093624]'
-                    }`}
-                  >
-                    <div
-                      className={`w-10 h-10 rounded-xs flex items-center justify-center shrink-0 ${
+                  {(settings.paymentCOD !== false) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPaymentMethod('Cash on Delivery');
+                        setErrors((prev) => ({
+                          ...prev,
+                          bkashNumber: undefined,
+                          bkashTransactionId: undefined,
+                        }));
+                      }}
+                      className={`p-4 rounded-xs border text-left transition-all cursor-pointer flex items-start gap-3 ${
                         paymentMethod === 'Cash on Delivery'
-                          ? 'bg-[#F9F295] text-[#093624]'
-                          : 'bg-[#F1EFEE] text-[#093624]'
+                          ? 'border-[#093624] bg-[#093624] text-[#F9F295] shadow-xs'
+                          : 'border-gray-200 bg-white text-[#141414] hover:border-[#093624]'
                       }`}
                     >
-                      <Banknote size={18} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-bold font-satoshi-bold">
-                          Cash on Delivery (COD)
-                        </span>
-                        {paymentMethod === 'Cash on Delivery' && <Check size={16} />}
-                      </div>
-                      <p
-                        className={`text-xs mt-0.5 ${
-                          paymentMethod === 'Cash on Delivery' ? 'text-white/85' : 'text-[#6D6868]'
+                      <div
+                        className={`w-10 h-10 rounded-xs flex items-center justify-center shrink-0 ${
+                          paymentMethod === 'Cash on Delivery'
+                            ? 'bg-[#F9F295] text-[#093624]'
+                            : 'bg-[#F1EFEE] text-[#093624]'
                         }`}
                       >
-                        Pay in cash when your order arrives
-                      </p>
-                    </div>
-                  </button>
+                        <Banknote size={18} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-bold font-satoshi-bold">
+                            Cash on Delivery (COD)
+                          </span>
+                          {paymentMethod === 'Cash on Delivery' && <Check size={16} />}
+                        </div>
+                        <p
+                          className={`text-xs mt-0.5 ${
+                            paymentMethod === 'Cash on Delivery' ? 'text-white/85' : 'text-[#6D6868]'
+                          }`}
+                        >
+                          Pay in cash upon delivery
+                        </p>
+                      </div>
+                    </button>
+                  )}
                 </div>
 
                 {/* Dynamic Payment Instructions Panel */}

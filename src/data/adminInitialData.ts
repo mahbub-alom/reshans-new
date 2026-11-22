@@ -420,6 +420,7 @@ export const INITIAL_SETTINGS: WebsiteSettings = {
   facebook: 'https://facebook.com/reshansbd',
   instagram: 'https://instagram.com/reshansfashion',
   youtube: 'https://youtube.com/@reshans',
+  tiktok: 'https://tiktok.com/@reshansbd',
   paymentCOD: true,
   paymentBkash: true,
   paymentNagad: true,

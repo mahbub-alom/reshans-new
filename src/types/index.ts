@@ -168,6 +168,7 @@ export interface WebsiteSettings {
   facebook: string;
   instagram: string;
   youtube: string;
+  tiktok?: string;
   paymentCOD: boolean;
   paymentBkash: boolean;
   paymentNagad: boolean;

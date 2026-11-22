@@ -6,7 +6,12 @@ import { Button } from '../components/common/Button';
 import { ChevronRight, ArrowRight, Check, MessageSquareHeart, PhoneCall, MapPin, Clock } from 'lucide-react';
 
 export const ContactPage: React.FC = () => {
-  const { navigate } = useShop();
+  const { navigate, settings } = useShop();
+
+  const displayEmail = settings.email || 'Reshans@gmail.com';
+  const displayPhone = settings.phone || '(+880) 1700 000 000';
+  const telLink = displayPhone.replace(/[^0-9+]/g, '');
+  const displayAddress = settings.address || 'Gulshan 2, Dhaka 1212';
 
   // Contact form state
   const [formData, setFormData] = useState({
@@ -96,10 +101,10 @@ export const ContactPage: React.FC = () => {
               <h3 className="text-xl font-bold font-satoshi-bold text-[#141414] mb-2">Feedbacks</h3>
               <p className="text-[#6D6868] text-sm mb-5 font-satoshi">Speak to our Friendly team.</p>
               <a
-                href="mailto:Reshans@gmail.com"
+                href={`mailto:${displayEmail}`}
                 className="text-base font-bold text-[#093624] hover:underline font-satoshi-bold"
               >
-                Reshans@gmail.com
+                {displayEmail}
               </a>
             </div>
 
@@ -111,10 +116,10 @@ export const ContactPage: React.FC = () => {
               <h3 className="text-xl font-bold font-satoshi-bold text-[#141414] mb-2">Call Us</h3>
               <p className="text-[#6D6868] text-sm mb-5 font-satoshi">Mon-Fri from 8am to 5pm</p>
               <a
-                href="tel:+8801700000000"
+                href={`tel:${telLink}`}
                 className="text-base font-bold text-[#093624] hover:underline font-satoshi-bold"
               >
-                (+880) 1700 000 000
+                {displayPhone}
               </a>
             </div>
 
@@ -126,7 +131,7 @@ export const ContactPage: React.FC = () => {
               <h3 className="text-xl font-bold font-satoshi-bold text-[#141414] mb-2">Visit Us</h3>
               <p className="text-[#6D6868] text-sm mb-5 font-satoshi">Visit our flagship showroom.</p>
               <span className="text-base font-bold text-[#093624] font-satoshi-bold block">
-                Gulshan 2, Dhaka 1212
+                {displayAddress}
               </span>
             </div>
 

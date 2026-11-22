@@ -24,7 +24,15 @@ export async function GET() {
         if (settings && settings.length > 0) {
           const map: Record<string, any> = {};
           settings.forEach((s) => {
-            map[s.key] = s.value;
+            const val = s.value;
+            // Parse boolean and numeric values
+            if (val === 'true') map[s.key] = true;
+            else if (val === 'false') map[s.key] = false;
+            else if (!isNaN(Number(val)) && val.trim() !== '' && !val.startsWith('0') && !val.startsWith('+') && s.key !== 'phone') {
+              map[s.key] = Number(val);
+            } else {
+              map[s.key] = val;
+            }
           });
           return NextResponse.json({ success: true, settings: { ...INITIAL_SETTINGS, ...map } });
         }
