@@ -42,7 +42,7 @@ export const HeaderTop: React.FC = () => {
           </div> */}
 
           {/* Right: Auth & Account Navigation */}
-          <div className="flex items-center gap-4 text-xs font-satoshi-med">
+          {/* <div className="flex items-center gap-4 text-xs font-satoshi-med">
             {isAuthenticated ? (
               <div className="flex items-center gap-3">
                 <span className="text-white/80">
@@ -89,7 +89,7 @@ export const HeaderTop: React.FC = () => {
                 </button>
               </div>
             )}
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

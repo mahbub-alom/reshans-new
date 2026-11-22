@@ -10,6 +10,7 @@ import {
   ShoppingBag,
   AlertTriangle,
   CheckCircle,
+  LogOut,
 } from 'lucide-react';
 import { AdminTab } from './AdminSidebar';
 import { useShop } from '../../context/ShopContext';
@@ -267,16 +268,7 @@ export const AdminTopNavbar: React.FC<AdminTopNavbarProps> = ({
                   </span>
                 </div>
 
-                <button
-                  onClick={() => {
-                    setIsProfileOpen(false);
-                    navigate('/');
-                  }}
-                  className="w-full text-left px-4 py-2 text-xs font-satoshi text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer flex items-center justify-between"
-                >
-                  <span>Go to Storefront</span>
-                  <ExternalLink size={12} className="text-gray-400" />
-                </button>
+              
 
                 <button
                   onClick={() => {
@@ -286,7 +278,7 @@ export const AdminTopNavbar: React.FC<AdminTopNavbarProps> = ({
                   className="w-full text-left px-4 py-2 text-xs font-satoshi text-red-600 hover:bg-red-50 transition-colors cursor-pointer border-t border-gray-100 flex items-center justify-between"
                 >
                   <span>Sign Out</span>
-                  <ExternalLink size={12} className="text-red-400" />
+                  <LogOut size={12} className="text-red-400" />
                 </button>
               </div>
             )}
