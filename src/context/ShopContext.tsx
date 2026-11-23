@@ -175,9 +175,20 @@ interface ShopContextType {
 const ShopContext = createContext<ShopContextType | undefined>(undefined);
 
 export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Live Products State (initialized with default products catalog)
-  const [products, setProducts] = useState<Product[]>(() =>
-    PRODUCTS.map((p, idx) => ({
+  // Live Products State (initialized with cached state or default products catalog)
+  const [products, setProducts] = useState<Product[]>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('reshans_products_v1');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    return PRODUCTS.map((p, idx) => ({
       ...p,
       stockCount: p.inStock ? 25 + idx * 5 : 0,
       sku: `RSH-FSH-${1000 + idx}`,
@@ -186,8 +197,8 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         : p.category.includes('Men')
         ? 'Reshans Atelier'
         : 'Reshans Studio',
-    }))
-  );
+    }));
+  });
 
   // Admin orders, customers, categories, brands, coupons, reviews, banners, settings, admin profile
   const [orders, setOrders] = useState<Order[]>(() => {
@@ -216,14 +227,15 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
 
-  // Fetch global store settings, coupons, and banners dynamically from database on load
+  // Fetch global store settings, coupons, banners, and products dynamically from database on load
   useEffect(() => {
     const fetchStoreSettingsCouponsAndBanners = async () => {
       try {
-        const [settingsRes, couponsRes, bannersRes] = await Promise.all([
+        const [settingsRes, couponsRes, bannersRes, productsRes] = await Promise.all([
           fetch('/api/settings'),
           fetch('/api/coupons'),
           fetch('/api/banners'),
+          fetch('/api/products'),
         ]);
 
         const settingsData = await settingsRes.json();
@@ -240,8 +252,32 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (bannersData.success && bannersData.banners) {
           setBanners(bannersData.banners);
         }
+
+        const productsData = await productsRes.json();
+        if (productsData.success && Array.isArray(productsData.products) && productsData.products.length > 0) {
+          setProducts((prev) => {
+            // Merge DB products with local product details, preserving DB stockCount & inStock
+            const dbMap = new Map(productsData.products.map((p: Product) => [p.id, p]));
+            const merged = prev.map((p) => {
+              const fromDb = dbMap.get(p.id) as Product | undefined;
+              if (fromDb) {
+                return {
+                  ...p,
+                  ...fromDb,
+                  inStock: fromDb.inStock,
+                  stockCount: fromDb.stockCount !== undefined ? fromDb.stockCount : p.stockCount,
+                };
+              }
+              return p;
+            });
+            try {
+              localStorage.setItem('reshans_products_v1', JSON.stringify(merged));
+            } catch {}
+            return merged;
+          });
+        }
       } catch (err) {
-        console.warn('Could not fetch settings/coupons/banners from API, using defaults:', err);
+        console.warn('Could not fetch settings/coupons/banners/products from API, using defaults:', err);
       }
     };
     fetchStoreSettingsCouponsAndBanners();
@@ -879,19 +915,49 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     showToast(`Product removed from catalog.`);
   };
 
-  const updateStock = (id: string, inStock: boolean, stockCount?: number) => {
-    setProducts((prev) =>
-      prev.map((item) =>
+  const updateStock = async (id: string, inStock: boolean, stockCount?: number) => {
+    const resolvedStockCount = stockCount !== undefined ? stockCount : inStock ? 15 : 0;
+    
+    // Optimistically update React state and localStorage
+    setProducts((prev) => {
+      const updated = prev.map((item) =>
         item.id === id
           ? {
               ...item,
               inStock,
-              stockCount: stockCount !== undefined ? stockCount : inStock ? 15 : 0,
+              stockCount: resolvedStockCount,
             }
           : item
-      )
-    );
-    showToast(`Stock status updated.`);
+      );
+      try {
+        localStorage.setItem('reshans_products_v1', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
+    showToast(`Stock updated: ${resolvedStockCount} units (${inStock ? 'In Stock' : 'Out of Stock'})`);
+
+    // Sync with backend API & Database
+    try {
+      const res = await fetch('/api/products', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+        body: JSON.stringify({
+          id,
+          inStock,
+          stockCount: resolvedStockCount,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        console.warn('Failed to update stock in DB:', data.error);
+      }
+    } catch (err) {
+      console.warn('Network error updating product stock:', err);
+    }
   };
 
   // Admin Order Actions

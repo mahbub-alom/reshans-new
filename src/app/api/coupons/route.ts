@@ -156,7 +156,7 @@ export async function PATCH(request: Request) {
 
     if (process.env.DATABASE_URL) {
       try {
-        let existing = null;
+        let existing: any = null;
         if (id) {
           existing = await prisma.coupon.findUnique({ where: { id } });
         } else if (code) {

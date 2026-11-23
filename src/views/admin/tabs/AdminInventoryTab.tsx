@@ -60,7 +60,6 @@ export const AdminInventoryTab: React.FC = () => {
           <div className="text-2xl font-bold font-satoshi-bold text-[#141414] tabular-nums">
             {totalUnits.toLocaleString()} Pcs
           </div>
-          <div className="text-xs text-gray-400 font-satoshi mt-1">Across all styles in Dhaka</div>
         </div>
 
         <div className="bg-white border border-[#EBEBEB] p-5 rounded-xs shadow-2xs">
