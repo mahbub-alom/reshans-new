@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useShop } from '../context/ShopContext';
 import {
   ArrowLeft,
@@ -16,7 +16,9 @@ import {
   User,
   AlertCircle,
   X,
+  ChevronDown,
 } from 'lucide-react';
+import { BD_GEO_LOCATIONS, DISPOSABLE_EMAIL_DOMAINS } from '../data/bdGeoData';
 
 interface FormErrors {
   customerName?: string;
@@ -56,9 +58,9 @@ export const CheckoutPage: React.FC = () => {
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
-  const [area, setArea] = useState('');
-  const [city, setCity] = useState('Dhaka');
-  const [postalCode, setPostalCode] = useState('');
+  const [district, setDistrict] = useState('Dhaka');
+  const [area, setArea] = useState('Banani');
+  const [postalCode, setPostalCode] = useState('1213');
   const [shippingZone, setShippingZone] = useState<'inside_dhaka' | 'outside_dhaka'>('inside_dhaka');
   const [note, setNote] = useState(orderNote || '');
 
@@ -66,6 +68,46 @@ export const CheckoutPage: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<'bKash' | 'Cash on Delivery'>('bKash');
   const [bkashNumber, setBkashNumber] = useState('');
   const [bkashTransactionId, setBkashTransactionId] = useState('');
+
+  // Selected district info & thana list
+  const currentDistrictData = useMemo(() => {
+    return BD_GEO_LOCATIONS.find((d) => d.district === district) || BD_GEO_LOCATIONS[0];
+  }, [district]);
+
+  // Handle District Change
+  const handleDistrictChange = (newDistrict: string) => {
+    setDistrict(newDistrict);
+    if (newDistrict === 'Dhaka') {
+      setShippingZone('inside_dhaka');
+    } else {
+      setShippingZone('outside_dhaka');
+    }
+
+    const distObj = BD_GEO_LOCATIONS.find((d) => d.district === newDistrict);
+    if (distObj && distObj.thanaList.length > 0) {
+      setArea(distObj.thanaList[0].name);
+      setPostalCode(distObj.thanaList[0].postcode || '');
+    } else {
+      setArea('');
+      setPostalCode('');
+    }
+
+    if (errors.city || errors.area) {
+      setErrors((prev) => ({ ...prev, city: undefined, area: undefined }));
+    }
+  };
+
+  // Handle Thana Change
+  const handleThanaChange = (newThana: string) => {
+    setArea(newThana);
+    const matched = currentDistrictData?.thanaList.find((t) => t.name === newThana);
+    if (matched && matched.postcode) {
+      setPostalCode(matched.postcode);
+    }
+    if (errors.area) {
+      setErrors((prev) => ({ ...prev, area: undefined }));
+    }
+  };
 
   // Independent coupon state for Buy Now vs Cart
   const [buyNowCouponCode, setBuyNowCouponCode] = useState<string | null>(null);
@@ -78,12 +120,14 @@ export const CheckoutPage: React.FC = () => {
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Sync shipping zone automatically if city changes to/from Dhaka
+  // Sync shipping zone automatically if district changes to/from Dhaka
   useEffect(() => {
-    if (city.trim().toLowerCase() === 'dhaka') {
+    if (district.trim().toLowerCase() === 'dhaka') {
       setShippingZone('inside_dhaka');
+    } else {
+      setShippingZone('outside_dhaka');
     }
-  }, [city]);
+  }, [district]);
 
   // Calculate Totals
   const subtotal = activeItems.reduce(
@@ -161,42 +205,118 @@ export const CheckoutPage: React.FC = () => {
     setCouponFeedback(null);
   };
 
+  // Helper to detect sequential digits like 01234567, 12345678, 87654321
+  const isSequentialDigits = (str: string): boolean => {
+    let ascCount = 1;
+    let descCount = 1;
+    for (let i = 1; i < str.length; i++) {
+      const diff = str.charCodeAt(i) - str.charCodeAt(i - 1);
+      if (diff === 1) {
+        ascCount++;
+        descCount = 1;
+        if (ascCount >= 5) return true;
+      } else if (diff === -1) {
+        descCount++;
+        ascCount = 1;
+        if (descCount >= 5) return true;
+      } else {
+        ascCount = 1;
+        descCount = 1;
+      }
+    }
+    return false;
+  };
+
+  // Helper to validate a Bangladeshi phone/wallet number
+  const isValidBdPhone = (rawPhone: string): { valid: boolean; message?: string } => {
+    const cleaned = rawPhone.replace(/[\s\-\(\)\+]/g, '');
+    let normalized = cleaned;
+    if (normalized.startsWith('880')) {
+      normalized = '0' + normalized.slice(3);
+    }
+    // Check length and prefix: 01 followed by 3,4,5,6,7,8,9 and 8 more digits
+    if (!/^01[3-9]\d{8}$/.test(normalized)) {
+      return {
+        valid: false,
+        message: 'Enter a valid 11-digit Bangladeshi mobile number (e.g. 017XXXXXXXX).',
+      };
+    }
+    // Check for repetitive fake numbers (e.g., 01700000000, 01711111111)
+    const subscriberPart = normalized.slice(3); // 8 digits
+    if (/^(\d)\1{6,}$/.test(subscriberPart)) {
+      return {
+        valid: false,
+        message: 'Invalid phone number: repeated digits detected.',
+      };
+    }
+    // Check for obvious sequential patterns (e.g. 12345678, 87654321)
+    if (isSequentialDigits(subscriberPart)) {
+      return {
+        valid: false,
+        message: 'Invalid phone number: sequential dummy numbers not allowed.',
+      };
+    }
+    return { valid: true };
+  };
+
   const validateForm = (): boolean => {
     const nextErrors: FormErrors = {};
 
-    if (!customerName.trim() || customerName.trim().length < 2) {
-      nextErrors.customerName = 'Please enter your full name.';
+    // 1. Full Name: min 2, max 50 chars, only letters, spaces, dots, hyphens
+    const trimmedName = customerName.trim();
+    if (!trimmedName || trimmedName.length < 2) {
+      nextErrors.customerName = 'Please enter your full name (minimum 2 characters).';
+    } else if (trimmedName.length > 50) {
+      nextErrors.customerName = 'Full name must not exceed 50 characters.';
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!customerEmail.trim() || !emailRegex.test(customerEmail.trim())) {
+    // 2. Email Address: valid syntax + disposable domain rejection
+    const trimmedEmail = customerEmail.trim().toLowerCase();
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+    if (!trimmedEmail || !emailRegex.test(trimmedEmail)) {
       nextErrors.customerEmail = 'Please enter a valid email address.';
-    }
-
-    const digitsOnly = customerPhone.replace(/\D/g, '');
-    if (!customerPhone.trim() || digitsOnly.length < 10) {
-      nextErrors.customerPhone = 'Please enter a valid contact phone number (at least 10 digits).';
-    }
-
-    if (!customerAddress.trim() || customerAddress.trim().length < 5) {
-      nextErrors.customerAddress = 'Please enter your full street address, house, and road number.';
-    }
-
-    if (!area.trim()) {
-      nextErrors.area = 'Please enter your area or thana.';
-    }
-
-    if (!city.trim()) {
-      nextErrors.city = 'Please enter your city or district.';
-    }
-
-    if (paymentMethod === 'bKash') {
-      const bkashDigits = bkashNumber.replace(/\D/g, '');
-      if (!bkashNumber.trim() || !/^01\d{9}$/.test(bkashDigits)) {
-        nextErrors.bkashNumber = 'Enter a valid 11-digit bKash wallet number (e.g. 017XXXXXXXX).';
+    } else {
+      const emailDomain = trimmedEmail.split('@')[1];
+      if (emailDomain && DISPOSABLE_EMAIL_DOMAINS.has(emailDomain)) {
+        nextErrors.customerEmail = 'Temporary/disposable email addresses are not permitted. Please provide a real email.';
       }
-      if (!bkashTransactionId.trim() || bkashTransactionId.trim().length < 6) {
+    }
+
+    // 3. Customer Phone: strict BD mobile validation
+    const phoneCheck = isValidBdPhone(customerPhone);
+    if (!phoneCheck.valid) {
+      nextErrors.customerPhone = phoneCheck.message || 'Please enter a valid BD phone number.';
+    }
+
+    // 4. Street Address: min 5, max 150
+    const trimmedAddress = customerAddress.trim();
+    if (!trimmedAddress || trimmedAddress.length < 5) {
+      nextErrors.customerAddress = 'Please enter your street address, house, and road number (min 5 chars).';
+    } else if (trimmedAddress.length > 150) {
+      nextErrors.customerAddress = 'Address cannot exceed 150 characters.';
+    }
+
+    // 5. Thana / Area
+    if (!area.trim()) {
+      nextErrors.area = 'Please select your area or thana.';
+    }
+
+    // 6. City / District
+    if (!district.trim()) {
+      nextErrors.city = 'Please select your district.';
+    }
+
+    // 7. Payment validation (bKash)
+    if (paymentMethod === 'bKash') {
+      const bkashCheck = isValidBdPhone(bkashNumber);
+      if (!bkashCheck.valid) {
+        nextErrors.bkashNumber = 'Enter a valid 11-digit bKash wallet number.';
+      }
+      const trimmedTrx = bkashTransactionId.trim();
+      if (!trimmedTrx || trimmedTrx.length < 6) {
         nextErrors.bkashTransactionId = 'Enter your bKash Transaction ID (TrxID, min 6 characters).';
+      } else if (!/^[A-Za-z0-9]{6,20}$/.test(trimmedTrx)) {
+        nextErrors.bkashTransactionId = 'Invalid Transaction ID: must be 6-20 alphanumeric characters.';
       }
     }
 
@@ -209,7 +329,7 @@ export const CheckoutPage: React.FC = () => {
     if (activeItems.length === 0) return;
 
     if (!validateForm()) {
-      showToast('Please complete all required checkout fields.');
+      showToast('Please complete all required checkout fields correctly.');
       return;
     }
 
@@ -219,10 +339,10 @@ export const CheckoutPage: React.FC = () => {
         mode: isBuyNow ? 'buy-now' : 'cart',
         items: activeItems,
         customerName: customerName.trim(),
-        customerEmail: customerEmail.trim(),
+        customerEmail: customerEmail.trim().toLowerCase(),
         customerPhone: customerPhone.trim(),
         customerAddress: customerAddress.trim(),
-        city: city.trim(),
+        city: district.trim(),
         area: area.trim(),
         postalCode: postalCode.trim() || undefined,
         shippingZone,
@@ -385,12 +505,17 @@ export const CheckoutPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div className="sm:col-span-2">
-                    <label
-                      htmlFor="checkout-name"
-                      className="block text-xs font-bold uppercase tracking-wider text-[#141414] mb-1.5 font-satoshi-bold"
-                    >
-                      Full Name *
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label
+                        htmlFor="checkout-name"
+                        className="block text-xs font-bold uppercase tracking-wider text-[#141414] font-satoshi-bold"
+                      >
+                        Full Name *
+                      </label>
+                      <span className="text-[11px] text-[#6D6868] tabular-nums">
+                        {customerName.length}/50
+                      </span>
+                    </div>
                     <div className="relative">
                       <User
                         size={16}
@@ -399,6 +524,7 @@ export const CheckoutPage: React.FC = () => {
                       <input
                         id="checkout-name"
                         type="text"
+                        maxLength={50}
                         value={customerName}
                         onChange={(e) => {
                           setCustomerName(e.target.value);
@@ -431,13 +557,14 @@ export const CheckoutPage: React.FC = () => {
                     <input
                       id="checkout-email"
                       type="email"
+                      maxLength={80}
                       value={customerEmail}
                       onChange={(e) => {
                         setCustomerEmail(e.target.value);
                         if (errors.customerEmail)
                           setErrors((prev) => ({ ...prev, customerEmail: undefined }));
                       }}
-                      placeholder="you@example.com"
+                      placeholder="you@example.com (real email only)"
                       className={`w-full h-12 px-4 bg-white border rounded-xs text-sm text-[#141414] placeholder:text-gray-400 focus:outline-none transition-colors ${
                         errors.customerEmail
                           ? 'border-[#141414] bg-[#F9F9F9]'
@@ -467,13 +594,14 @@ export const CheckoutPage: React.FC = () => {
                       <input
                         id="checkout-phone"
                         type="tel"
+                        maxLength={14}
                         value={customerPhone}
                         onChange={(e) => {
                           setCustomerPhone(e.target.value);
                           if (errors.customerPhone)
                             setErrors((prev) => ({ ...prev, customerPhone: undefined }));
                         }}
-                        placeholder="+880 17XX XXXXXX"
+                        placeholder="017XXXXXXXX"
                         className={`w-full h-12 pl-10 pr-4 bg-white border rounded-xs text-sm text-[#141414] placeholder:text-gray-400 focus:outline-none transition-colors ${
                           errors.customerPhone
                             ? 'border-[#141414] bg-[#F9F9F9]'
@@ -510,17 +638,12 @@ export const CheckoutPage: React.FC = () => {
                 {/* Delivery Zone Selection */}
                 <div className="space-y-2">
                   <span className="block text-xs font-bold uppercase tracking-wider text-[#141414] font-satoshi-bold">
-                    Shipping Zone *
+                    Shipping Zone (Auto-assigned by District)
                   </span>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <button
                       type="button"
-                      onClick={() => {
-                        setShippingZone('inside_dhaka');
-                        if (!city.trim() || city.trim().toLowerCase() !== 'dhaka') {
-                          setCity('Dhaka');
-                        }
-                      }}
+                      onClick={() => handleDistrictChange('Dhaka')}
                       className={`p-3.5 rounded-xs border text-left transition-all cursor-pointer flex items-center justify-between ${
                         shippingZone === 'inside_dhaka'
                           ? 'border-[#093624] bg-[#093624]/5 ring-1 ring-[#093624]'
@@ -556,9 +679,8 @@ export const CheckoutPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        setShippingZone('outside_dhaka');
-                        if (city.trim().toLowerCase() === 'dhaka') {
-                          setCity('');
+                        if (district === 'Dhaka') {
+                          handleDistrictChange('Chattogram');
                         }
                       }}
                       className={`p-3.5 rounded-xs border text-left transition-all cursor-pointer flex items-center justify-between ${
@@ -597,12 +719,17 @@ export const CheckoutPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div className="sm:col-span-2">
-                    <label
-                      htmlFor="checkout-address"
-                      className="block text-xs font-bold uppercase tracking-wider text-[#141414] mb-1.5 font-satoshi-bold"
-                    >
-                      Street Address (House, Road, Flat) *
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label
+                        htmlFor="checkout-address"
+                        className="block text-xs font-bold uppercase tracking-wider text-[#141414] font-satoshi-bold"
+                      >
+                        Street Address (House, Road, Flat, Area details) *
+                      </label>
+                      <span className="text-[11px] text-[#6D6868] tabular-nums">
+                        {customerAddress.length}/150
+                      </span>
+                    </div>
                     <div className="relative">
                       <MapPin
                         size={16}
@@ -611,6 +738,7 @@ export const CheckoutPage: React.FC = () => {
                       <input
                         id="checkout-address"
                         type="text"
+                        maxLength={150}
                         value={customerAddress}
                         onChange={(e) => {
                           setCustomerAddress(e.target.value);
@@ -633,28 +761,81 @@ export const CheckoutPage: React.FC = () => {
                     )}
                   </div>
 
+                  {/* District Dropdown (64 districts grouped by division) */}
+                  <div>
+                    <label
+                      htmlFor="checkout-district"
+                      className="block text-xs font-bold uppercase tracking-wider text-[#141414] mb-1.5 font-satoshi-bold"
+                    >
+                      City / District *
+                    </label>
+                    <div className="relative">
+                      <select
+                        id="checkout-district"
+                        value={district}
+                        onChange={(e) => handleDistrictChange(e.target.value)}
+                        className={`w-full h-12 px-4 pr-10 bg-white border rounded-xs text-sm text-[#141414] focus:outline-none transition-colors appearance-none cursor-pointer ${
+                          errors.city
+                            ? 'border-[#141414] bg-[#F9F9F9]'
+                            : 'border-gray-300 focus:border-[#093624]'
+                        }`}
+                      >
+                        {Array.from(new Set(BD_GEO_LOCATIONS.map((d) => d.division))).map((divName) => (
+                          <optgroup key={divName} label={`${divName} Division`}>
+                            {BD_GEO_LOCATIONS.filter((d) => d.division === divName).map((d) => (
+                              <option key={d.district} value={d.district}>
+                                {d.district}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ))}
+                      </select>
+                      <ChevronDown
+                        size={16}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                      />
+                    </div>
+                    {errors.city && (
+                      <p className="mt-1 text-xs text-[#141414] font-satoshi-med flex items-center gap-1">
+                        <AlertCircle size={12} className="text-[#093624]" />
+                        <span>{errors.city}</span>
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Area / Thana Dropdown based on selected district */}
                   <div>
                     <label
                       htmlFor="checkout-area"
                       className="block text-xs font-bold uppercase tracking-wider text-[#141414] mb-1.5 font-satoshi-bold"
                     >
-                      Area / Thana *
+                      Area / Thana / Upazila *
                     </label>
-                    <input
-                      id="checkout-area"
-                      type="text"
-                      value={area}
-                      onChange={(e) => {
-                        setArea(e.target.value);
-                        if (errors.area) setErrors((prev) => ({ ...prev, area: undefined }));
-                      }}
-                      placeholder="e.g. Banani, Gulshan, Dhanmondi"
-                      className={`w-full h-12 px-4 bg-white border rounded-xs text-sm text-[#141414] placeholder:text-gray-400 focus:outline-none transition-colors ${
-                        errors.area
-                          ? 'border-[#141414] bg-[#F9F9F9]'
-                          : 'border-gray-300 focus:border-[#093624]'
-                      }`}
-                    />
+                    <div className="relative">
+                      <select
+                        id="checkout-area"
+                        value={area}
+                        onChange={(e) => handleThanaChange(e.target.value)}
+                        className={`w-full h-12 px-4 pr-10 bg-white border rounded-xs text-sm text-[#141414] focus:outline-none transition-colors appearance-none cursor-pointer ${
+                          errors.area
+                            ? 'border-[#141414] bg-[#F9F9F9]'
+                            : 'border-gray-300 focus:border-[#093624]'
+                        }`}
+                      >
+                        <option value="" disabled>
+                          Select Area / Thana
+                        </option>
+                        {currentDistrictData?.thanaList.map((thana) => (
+                          <option key={thana.name} value={thana.name}>
+                            {thana.name} {thana.postcode ? `(${thana.postcode})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown
+                        size={16}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                      />
+                    </div>
                     {errors.area && (
                       <p className="mt-1 text-xs text-[#141414] font-satoshi-med flex items-center gap-1">
                         <AlertCircle size={12} className="text-[#093624]" />
@@ -665,44 +846,15 @@ export const CheckoutPage: React.FC = () => {
 
                   <div>
                     <label
-                      htmlFor="checkout-city"
-                      className="block text-xs font-bold uppercase tracking-wider text-[#141414] mb-1.5 font-satoshi-bold"
-                    >
-                      City / District *
-                    </label>
-                    <input
-                      id="checkout-city"
-                      type="text"
-                      value={city}
-                      onChange={(e) => {
-                        setCity(e.target.value);
-                        if (errors.city) setErrors((prev) => ({ ...prev, city: undefined }));
-                      }}
-                      placeholder="e.g. Dhaka, Chattogram, Sylhet"
-                      className={`w-full h-12 px-4 bg-white border rounded-xs text-sm text-[#141414] placeholder:text-gray-400 focus:outline-none transition-colors ${
-                        errors.city
-                          ? 'border-[#141414] bg-[#F9F9F9]'
-                          : 'border-gray-300 focus:border-[#093624]'
-                      }`}
-                    />
-                    {errors.city && (
-                      <p className="mt-1 text-xs text-[#141414] font-satoshi-med flex items-center gap-1">
-                        <AlertCircle size={12} className="text-[#093624]" />
-                        <span>{errors.city}</span>
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
                       htmlFor="checkout-postal"
                       className="block text-xs font-bold uppercase tracking-wider text-[#141414] mb-1.5 font-satoshi-bold"
                     >
-                      Postal Code (Optional)
+                      Postal Code (Auto-populated)
                     </label>
                     <input
                       id="checkout-postal"
                       type="text"
+                      maxLength={10}
                       value={postalCode}
                       onChange={(e) => setPostalCode(e.target.value)}
                       placeholder="e.g. 1213"
@@ -711,15 +863,21 @@ export const CheckoutPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label
-                      htmlFor="checkout-note"
-                      className="block text-xs font-bold uppercase tracking-wider text-[#141414] mb-1.5 font-satoshi-bold"
-                    >
-                      Delivery Note (Optional)
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label
+                        htmlFor="checkout-note"
+                        className="block text-xs font-bold uppercase tracking-wider text-[#141414] font-satoshi-bold"
+                      >
+                        Delivery Note (Optional)
+                      </label>
+                      <span className="text-[11px] text-[#6D6868] tabular-nums">
+                        {note.length}/200
+                      </span>
+                    </div>
                     <input
                       id="checkout-note"
                       type="text"
+                      maxLength={200}
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
                       placeholder="e.g. Call before arrival"
@@ -867,15 +1025,21 @@ export const CheckoutPage: React.FC = () => {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label
-                          htmlFor="bkash-number"
-                          className="block text-xs font-bold uppercase tracking-wider text-[#141414] mb-1.5 font-satoshi-bold"
-                        >
-                          Your bKash Number *
-                        </label>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label
+                            htmlFor="bkash-number"
+                            className="block text-xs font-bold uppercase tracking-wider text-[#141414] font-satoshi-bold"
+                          >
+                            Your bKash Number *
+                          </label>
+                          <span className="text-[11px] text-[#6D6868] tabular-nums">
+                            {bkashNumber.length}/14
+                          </span>
+                        </div>
                         <input
                           id="bkash-number"
                           type="tel"
+                          maxLength={14}
                           value={bkashNumber}
                           onChange={(e) => {
                             setBkashNumber(e.target.value);
@@ -898,18 +1062,24 @@ export const CheckoutPage: React.FC = () => {
                       </div>
 
                       <div>
-                        <label
-                          htmlFor="bkash-trx"
-                          className="block text-xs font-bold uppercase tracking-wider text-[#141414] mb-1.5 font-satoshi-bold"
-                        >
-                          bKash Transaction ID (TrxID) *
-                        </label>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label
+                            htmlFor="bkash-trx"
+                            className="block text-xs font-bold uppercase tracking-wider text-[#141414] font-satoshi-bold"
+                          >
+                            bKash Transaction ID (TrxID) *
+                          </label>
+                          <span className="text-[11px] text-[#6D6868] tabular-nums">
+                            {bkashTransactionId.length}/20
+                          </span>
+                        </div>
                         <input
                           id="bkash-trx"
                           type="text"
+                          maxLength={20}
                           value={bkashTransactionId}
                           onChange={(e) => {
-                            setBkashTransactionId(e.target.value);
+                            setBkashTransactionId(e.target.value.toUpperCase());
                             if (errors.bkashTransactionId)
                               setErrors((prev) => ({ ...prev, bkashTransactionId: undefined }));
                           }}
