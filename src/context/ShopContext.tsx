@@ -216,13 +216,14 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
 
-  // Fetch global store settings and coupons dynamically from database on load
+  // Fetch global store settings, coupons, and banners dynamically from database on load
   useEffect(() => {
-    const fetchStoreSettingsAndCoupons = async () => {
+    const fetchStoreSettingsCouponsAndBanners = async () => {
       try {
-        const [settingsRes, couponsRes] = await Promise.all([
+        const [settingsRes, couponsRes, bannersRes] = await Promise.all([
           fetch('/api/settings'),
           fetch('/api/coupons'),
+          fetch('/api/banners'),
         ]);
 
         const settingsData = await settingsRes.json();
@@ -234,11 +235,16 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (couponsData.success && couponsData.coupons) {
           setCoupons(couponsData.coupons);
         }
+
+        const bannersData = await bannersRes.json();
+        if (bannersData.success && bannersData.banners) {
+          setBanners(bannersData.banners);
+        }
       } catch (err) {
-        console.warn('Could not fetch settings/coupons from API, using defaults:', err);
+        console.warn('Could not fetch settings/coupons/banners from API, using defaults:', err);
       }
     };
-    fetchStoreSettingsAndCoupons();
+    fetchStoreSettingsCouponsAndBanners();
   }, []);
 
   // Validate session on mount
@@ -1039,19 +1045,43 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     showToast(`Review removed.`);
   };
 
-  // Admin Banners
-  const updateBanner = (id: string, updated: Partial<WebsiteBanner>) => {
-    setBanners((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, ...updated } : b))
-    );
+  // Admin Banners & Marquee
+  const updateBanner = async (id: string, updated: Partial<WebsiteBanner>) => {
+    let nextBanners: WebsiteBanner[] = [];
+    setBanners((prev) => {
+      nextBanners = prev.map((b) => (b.id === id ? { ...b, ...updated } : b));
+      return nextBanners;
+    });
     showToast(`Banner updated.`);
+
+    try {
+      await fetch('/api/banners', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ banners: nextBanners }),
+      });
+    } catch (err) {
+      console.warn('Could not sync banners to DB:', err);
+    }
   };
 
-  const toggleBanner = (id: string) => {
-    setBanners((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, isActive: !b.isActive } : b))
-    );
+  const toggleBanner = async (id: string) => {
+    let nextBanners: WebsiteBanner[] = [];
+    setBanners((prev) => {
+      nextBanners = prev.map((b) => (b.id === id ? { ...b, isActive: !b.isActive } : b));
+      return nextBanners;
+    });
     showToast(`Banner visibility toggled.`);
+
+    try {
+      await fetch('/api/banners', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ banners: nextBanners }),
+      });
+    } catch (err) {
+      console.warn('Could not sync banners to DB:', err);
+    }
   };
 
   // Admin Settings & Profile
