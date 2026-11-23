@@ -24,10 +24,10 @@ export const AdminCouponsTab: React.FC = () => {
   const [form, setForm] = useState({
     code: '',
     discountType: 'percentage' as 'percentage' | 'fixed',
-    discountValue: 15,
-    minSpend: 2500,
+    discountValue: '15',
+    minSpend: '2500',
     expiryDate: '2026-06-30',
-    usageLimit: 300,
+    usageLimit: '300',
     isActive: true,
   });
 
@@ -38,20 +38,20 @@ export const AdminCouponsTab: React.FC = () => {
     addCoupon({
       code: form.code.trim().toUpperCase(),
       discountType: form.discountType,
-      discountValue: Number(form.discountValue),
-      minSpend: Number(form.minSpend),
+      discountValue: form.discountValue === '' ? 0 : Number(form.discountValue),
+      minSpend: form.minSpend === '' ? 0 : Number(form.minSpend),
       expiryDate: form.expiryDate,
-      usageLimit: Number(form.usageLimit),
+      usageLimit: form.usageLimit === '' ? 100 : Number(form.usageLimit),
       isActive: form.isActive,
     });
 
     setForm({
       code: '',
       discountType: 'percentage',
-      discountValue: 15,
-      minSpend: 2500,
+      discountValue: '15',
+      minSpend: '2500',
       expiryDate: '2026-06-30',
-      usageLimit: 300,
+      usageLimit: '300',
       isActive: true,
     });
     setIsModalOpen(false);
@@ -69,11 +69,9 @@ export const AdminCouponsTab: React.FC = () => {
         <div>
           <h3 className="text-base font-bold font-satoshi-bold text-[#141414] flex items-center gap-2">
             <Tag size={18} className="text-[#093624]" />
-            <span>Discount Coupons & Promotional Offers ({coupons.length})</span>
+            <span>Discount Coupons & Promotional Offers </span>
           </h3>
-          <p className="text-xs text-brand-body">
-            Manage customer vouchers, flash deal codes, and promotional incentives in BDT (৳)
-          </p>
+         
         </div>
 
         <button
@@ -185,7 +183,7 @@ export const AdminCouponsTab: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs">
           <div className="bg-white rounded-xs border border-[#EBEBEB] shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="p-4 border-b border-[#EBEBEB] flex items-center justify-between bg-[#093624] text-white">
-              <h3 className="text-sm font-bold font-satoshi-bold">Create Promo Voucher</h3>
+              <h3 className="text-sm font-bold font-satoshi-bold text-white!">Create Promo Voucher</h3>
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="p-1 text-white/70 hover:text-white"
@@ -233,7 +231,13 @@ export const AdminCouponsTab: React.FC = () => {
                     required
                     min={1}
                     value={form.discountValue}
-                    onChange={(e) => setForm({ ...form, discountValue: Number(e.target.value) })}
+                    placeholder="e.g. 15"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      // Strip leading zeros if more than 1 digit, allow blank
+                      const sanitized = val === '' ? '' : String(Number(val));
+                      setForm({ ...form, discountValue: sanitized });
+                    }}
                     className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs focus:outline-none focus:border-[#093624]"
                   />
                 </div>
@@ -248,7 +252,12 @@ export const AdminCouponsTab: React.FC = () => {
                     type="number"
                     min={0}
                     value={form.minSpend}
-                    onChange={(e) => setForm({ ...form, minSpend: Number(e.target.value) })}
+                    placeholder="e.g. 2500"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const sanitized = val === '' ? '' : String(Number(val));
+                      setForm({ ...form, minSpend: sanitized });
+                    }}
                     className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs focus:outline-none focus:border-[#093624]"
                   />
                 </div>
@@ -261,7 +270,12 @@ export const AdminCouponsTab: React.FC = () => {
                     type="number"
                     min={1}
                     value={form.usageLimit}
-                    onChange={(e) => setForm({ ...form, usageLimit: Number(e.target.value) })}
+                    placeholder="e.g. 300"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const sanitized = val === '' ? '' : String(Number(val));
+                      setForm({ ...form, usageLimit: sanitized });
+                    }}
                     className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs focus:outline-none focus:border-[#093624]"
                   />
                 </div>

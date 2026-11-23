@@ -104,3 +104,96 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    const code = searchParams.get('code');
+
+    if (!id && !code) {
+      return NextResponse.json(
+        { success: false, error: 'Coupon ID or code is required' },
+        { status: 400 }
+      );
+    }
+
+    if (process.env.DATABASE_URL) {
+      try {
+        if (id) {
+          await prisma.coupon.delete({ where: { id } });
+        } else if (code) {
+          await prisma.coupon.delete({ where: { code: code.toUpperCase() } });
+        }
+        return NextResponse.json({ success: true, message: 'Coupon deleted from database' });
+      } catch (err: any) {
+        console.warn('Prisma coupon delete fallback:', err);
+        // If not found in DB, return success true so local state cleans up
+        return NextResponse.json({ success: true, message: 'Coupon deleted' });
+      }
+    }
+
+    return NextResponse.json({ success: true, message: 'Coupon deleted' });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to delete coupon' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+    const { id, code, isActive, incrementUsage } = body;
+
+    if (!id && !code) {
+      return NextResponse.json(
+        { success: false, error: 'Coupon ID or code is required' },
+        { status: 400 }
+      );
+    }
+
+    if (process.env.DATABASE_URL) {
+      try {
+        let existing = null;
+        if (id) {
+          existing = await prisma.coupon.findUnique({ where: { id } });
+        } else if (code) {
+          existing = await prisma.coupon.findUnique({ where: { code: code.toUpperCase() } });
+        }
+
+        if (existing) {
+          const updateData: any = {};
+          if (isActive !== undefined) {
+            updateData.isActive = Boolean(isActive);
+          }
+          if (incrementUsage) {
+            const nextUsage = existing.usageCount + 1;
+            updateData.usageCount = nextUsage;
+            // Requirement: If usage limit crossed/reached, automatically turn OFF the coupon!
+            if (nextUsage >= existing.usageLimit) {
+              updateData.isActive = false;
+            }
+          }
+
+          const updated = await prisma.coupon.update({
+            where: { id: existing.id },
+            data: updateData,
+          });
+
+          return NextResponse.json({ success: true, coupon: updated });
+        }
+      } catch (err) {
+        console.warn('Prisma coupon update fallback:', err);
+      }
+    }
+
+    return NextResponse.json({ success: true, updated: body });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to update coupon' },
+      { status: 500 }
+    );
+  }
+}

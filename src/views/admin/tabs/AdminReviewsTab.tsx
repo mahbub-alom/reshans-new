@@ -32,11 +32,9 @@ export const AdminReviewsTab: React.FC = () => {
         <div>
           <h3 className="text-base font-bold font-satoshi-bold text-[#141414] flex items-center gap-2">
             <Star size={18} className="text-[#093624]" />
-            <span>Customer Reviews Moderation ({reviews.length})</span>
+            <span>Customer Reviews Moderation</span>
           </h3>
-          <p className="text-xs text-brand-body">
-            Verify authentic customer feedback before publishing publicly on product pages
-          </p>
+          
         </div>
 
         <div className="flex items-center gap-2">
@@ -107,12 +105,12 @@ export const AdminReviewsTab: React.FC = () => {
 
                   <span className="font-satoshi-bold text-gray-700">{rev.customerName}</span>
 
-                  {rev.isVerified && (
+                  {/* {rev.isVerified && (
                     <span className="inline-flex items-center gap-1 text-[10px] text-[#093624] bg-[#F9F295]/50 px-1.5 py-0.2 rounded-xs font-satoshi-bold">
                       <ShieldCheck size={11} />
                       Verified In-Hand Delivery
                     </span>
-                  )}
+                  )} */}
 
                   <span className="text-gray-400">•</span>
                   <span className="text-gray-400 text-[11px]">{rev.date}</span>

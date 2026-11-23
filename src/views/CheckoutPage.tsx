@@ -53,21 +53,113 @@ export const CheckoutPage: React.FC = () => {
   const isBuyNow = checkoutMode === 'buy-now' && buyNowItem !== null;
   const activeItems = isBuyNow && buyNowItem ? [buyNowItem] : cart;
 
-  // Customer & Shipping Form State
-  const [customerName, setCustomerName] = useState('');
-  const [customerEmail, setCustomerEmail] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [customerAddress, setCustomerAddress] = useState('');
-  const [district, setDistrict] = useState('Dhaka');
-  const [area, setArea] = useState('Banani');
-  const [postalCode, setPostalCode] = useState('1213');
+  // Checkout Step (1: Info & Delivery, 2: Payment Method) with persistent storage
+  const [checkoutStep, setCheckoutStep] = useState<1 | 2>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('reshans_checkout_step');
+        if (saved === '2') return 2;
+      } catch {}
+    }
+    return 1;
+  });
+
+  // Customer & Shipping Form State with localStorage persistence
+  const [customerName, setCustomerName] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('reshans_checkout_name') || '';
+    }
+    return '';
+  });
+  const [customerEmail, setCustomerEmail] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('reshans_checkout_email') || '';
+    }
+    return '';
+  });
+  const [customerPhone, setCustomerPhone] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('reshans_checkout_phone') || '';
+    }
+    return '';
+  });
+  const [customerAddress, setCustomerAddress] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('reshans_checkout_address') || '';
+    }
+    return '';
+  });
+  const [district, setDistrict] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('reshans_checkout_district') || 'Dhaka';
+    }
+    return 'Dhaka';
+  });
+  const [area, setArea] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('reshans_checkout_area') || 'Banani';
+    }
+    return 'Banani';
+  });
+  const [postalCode, setPostalCode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('reshans_checkout_postal') || '1213';
+    }
+    return '1213';
+  });
   const [shippingZone, setShippingZone] = useState<'inside_dhaka' | 'outside_dhaka'>('inside_dhaka');
-  const [note, setNote] = useState(orderNote || '');
+  const [note, setNote] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('reshans_checkout_note') || orderNote || '';
+    }
+    return orderNote || '';
+  });
 
   // Payment Method State (bKash or Cash on Delivery)
-  const [paymentMethod, setPaymentMethod] = useState<'bKash' | 'Cash on Delivery'>('bKash');
-  const [bkashNumber, setBkashNumber] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'bKash' | 'Cash on Delivery'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('reshans_checkout_payment_method');
+      if (saved === 'Cash on Delivery' || saved === 'bKash') return saved;
+    }
+    return 'bKash';
+  });
+  const [bkashNumber, setBkashNumber] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('reshans_checkout_bkash_number') || '';
+    }
+    return '';
+  });
   const [bkashTransactionId, setBkashTransactionId] = useState('');
+
+  // Persist form fields to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem('reshans_checkout_step', String(checkoutStep));
+      localStorage.setItem('reshans_checkout_name', customerName);
+      localStorage.setItem('reshans_checkout_email', customerEmail);
+      localStorage.setItem('reshans_checkout_phone', customerPhone);
+      localStorage.setItem('reshans_checkout_address', customerAddress);
+      localStorage.setItem('reshans_checkout_district', district);
+      localStorage.setItem('reshans_checkout_area', area);
+      localStorage.setItem('reshans_checkout_postal', postalCode);
+      localStorage.setItem('reshans_checkout_note', note);
+      localStorage.setItem('reshans_checkout_payment_method', paymentMethod);
+      if (bkashNumber) localStorage.setItem('reshans_checkout_bkash_number', bkashNumber);
+    } catch {}
+  }, [
+    checkoutStep,
+    customerName,
+    customerEmail,
+    customerPhone,
+    customerAddress,
+    district,
+    area,
+    postalCode,
+    note,
+    paymentMethod,
+    bkashNumber,
+  ]);
 
   // Selected district info & thana list
   const currentDistrictData = useMemo(() => {
@@ -259,10 +351,11 @@ export const CheckoutPage: React.FC = () => {
     return { valid: true };
   };
 
-  const validateForm = (): boolean => {
+  // Step 1 Validation: Customer Contact & Delivery Address
+  const validateStep1 = (): boolean => {
     const nextErrors: FormErrors = {};
 
-    // 1. Full Name: min 2, max 50 chars, only letters, spaces, dots, hyphens
+    // 1. Full Name: min 2, max 50 chars
     const trimmedName = customerName.trim();
     if (!trimmedName || trimmedName.length < 2) {
       nextErrors.customerName = 'Please enter your full name (minimum 2 characters).';
@@ -306,7 +399,14 @@ export const CheckoutPage: React.FC = () => {
       nextErrors.city = 'Please select your district.';
     }
 
-    // 7. Payment validation (bKash)
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  // Step 2 Validation: Payment Method
+  const validateStep2 = (): boolean => {
+    const nextErrors: FormErrors = {};
+
     if (paymentMethod === 'bKash') {
       const bkashCheck = isValidBdPhone(bkashNumber);
       if (!bkashCheck.valid) {
@@ -324,12 +424,32 @@ export const CheckoutPage: React.FC = () => {
     return Object.keys(nextErrors).length === 0;
   };
 
+  const handleProceedToPayment = () => {
+    if (!validateStep1()) {
+      showToast('Please complete all contact and address fields correctly.');
+      return;
+    }
+    setCheckoutStep(2);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleBackToAddress = () => {
+    setCheckoutStep(1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handlePlaceOrder = (e: React.FormEvent) => {
     e.preventDefault();
     if (activeItems.length === 0) return;
 
-    if (!validateForm()) {
-      showToast('Please complete all required checkout fields correctly.');
+    if (!validateStep1()) {
+      setCheckoutStep(1);
+      showToast('Please verify your contact and address details.');
+      return;
+    }
+
+    if (!validateStep2()) {
+      showToast('Please verify your payment details.');
       return;
     }
 
@@ -357,6 +477,11 @@ export const CheckoutPage: React.FC = () => {
         total: finalTotal,
         note: note.trim() || undefined,
       });
+      // Clear persistent checkout cache upon order placement
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('reshans_checkout_step');
+        localStorage.removeItem('reshans_checkout_trx');
+      }
       setIsSubmitting(false);
     }, 550);
   };
@@ -437,8 +562,45 @@ export const CheckoutPage: React.FC = () => {
                 {isBuyNow ? 'Express Direct Checkout' : 'Checkout'}
               </h1>
               <p className="text-xs sm:text-sm text-[#6D6868] mt-1">
-                Complete your delivery details and select bKash or Cash on Delivery to place your order.
+                {checkoutStep === 1
+                  ? 'Step 1: Provide your customer contact information and delivery address.'
+                  : 'Step 2: Choose your payment method and confirm your order.'}
               </p>
+            </div>
+
+            {/* Stepper Indicator */}
+            <div className="flex items-center gap-2 bg-white border border-gray-200 p-1.5 rounded-xs">
+              <button
+                type="button"
+                onClick={() => setCheckoutStep(1)}
+                className={`px-3 py-1.5 text-xs font-bold rounded-2xs flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  checkoutStep === 1
+                    ? 'bg-[#093624] text-[#F9F295]'
+                    : 'text-[#6D6868] hover:text-[#141414]'
+                }`}
+              >
+                <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">
+                  1
+                </span>
+                <span>Address & Info</span>
+              </button>
+
+              <span className="text-gray-300">/</span>
+
+              <button
+                type="button"
+                onClick={handleProceedToPayment}
+                className={`px-3 py-1.5 text-xs font-bold rounded-2xs flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  checkoutStep === 2
+                    ? 'bg-[#093624] text-[#F9F295]'
+                    : 'text-[#6D6868] hover:text-[#141414]'
+                }`}
+              >
+                <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">
+                  2
+                </span>
+                <span>Payment</span>
+              </button>
             </div>
 
             {isBuyNow && (
@@ -487,637 +649,703 @@ export const CheckoutPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Section 1: Customer Contact Information */}
-              <div className="border border-gray-200 rounded-xs p-6 sm:p-8 bg-white space-y-5">
-                <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
-                  <div className="w-8 h-8 rounded-full bg-[#093624] text-[#F9F295] flex items-center justify-center text-xs font-bold font-satoshi-bold">
-                    01
-                  </div>
-                  <div>
-                    <h2 className="text-base sm:text-lg font-bold font-satoshi-bold text-[#141414]">
-                      Customer & Contact Information
-                    </h2>
-                    <p className="text-xs text-[#6D6868]">
-                      Used for order confirmation and courier delivery updates.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div className="sm:col-span-2">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label
-                        htmlFor="checkout-name"
-                        className="block text-xs font-bold uppercase tracking-wider text-[#141414] font-satoshi-bold"
-                      >
-                        Full Name *
-                      </label>
-                      <span className="text-[11px] text-[#6D6868] tabular-nums">
-                        {customerName.length}/50
-                      </span>
-                    </div>
-                    <div className="relative">
-                      <User
-                        size={16}
-                        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
-                      />
-                      <input
-                        id="checkout-name"
-                        type="text"
-                        maxLength={50}
-                        value={customerName}
-                        onChange={(e) => {
-                          setCustomerName(e.target.value);
-                          if (errors.customerName)
-                            setErrors((prev) => ({ ...prev, customerName: undefined }));
-                        }}
-                        placeholder="e.g. Tanvir Rahman"
-                        className={`w-full h-12 pl-10 pr-4 bg-white border rounded-xs text-sm text-[#141414] placeholder:text-gray-400 focus:outline-none transition-colors ${
-                          errors.customerName
-                            ? 'border-[#141414] bg-[#F9F9F9]'
-                            : 'border-gray-300 focus:border-[#093624]'
-                        }`}
-                      />
-                    </div>
-                    {errors.customerName && (
-                      <p className="mt-1 text-xs text-[#141414] font-satoshi-med flex items-center gap-1">
-                        <AlertCircle size={12} className="text-[#093624]" />
-                        <span>{errors.customerName}</span>
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="checkout-email"
-                      className="block text-xs font-bold uppercase tracking-wider text-[#141414] mb-1.5 font-satoshi-bold"
-                    >
-                      Email Address *
-                    </label>
-                    <input
-                      id="checkout-email"
-                      type="email"
-                      maxLength={80}
-                      value={customerEmail}
-                      onChange={(e) => {
-                        setCustomerEmail(e.target.value);
-                        if (errors.customerEmail)
-                          setErrors((prev) => ({ ...prev, customerEmail: undefined }));
-                      }}
-                      placeholder="you@example.com (real email only)"
-                      className={`w-full h-12 px-4 bg-white border rounded-xs text-sm text-[#141414] placeholder:text-gray-400 focus:outline-none transition-colors ${
-                        errors.customerEmail
-                          ? 'border-[#141414] bg-[#F9F9F9]'
-                          : 'border-gray-300 focus:border-[#093624]'
-                      }`}
-                    />
-                    {errors.customerEmail && (
-                      <p className="mt-1 text-xs text-[#141414] font-satoshi-med flex items-center gap-1">
-                        <AlertCircle size={12} className="text-[#093624]" />
-                        <span>{errors.customerEmail}</span>
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="checkout-phone"
-                      className="block text-xs font-bold uppercase tracking-wider text-[#141414] mb-1.5 font-satoshi-bold"
-                    >
-                      Phone Number *
-                    </label>
-                    <div className="relative">
-                      <Phone
-                        size={15}
-                        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
-                      />
-                      <input
-                        id="checkout-phone"
-                        type="tel"
-                        maxLength={14}
-                        value={customerPhone}
-                        onChange={(e) => {
-                          setCustomerPhone(e.target.value);
-                          if (errors.customerPhone)
-                            setErrors((prev) => ({ ...prev, customerPhone: undefined }));
-                        }}
-                        placeholder="017XXXXXXXX"
-                        className={`w-full h-12 pl-10 pr-4 bg-white border rounded-xs text-sm text-[#141414] placeholder:text-gray-400 focus:outline-none transition-colors ${
-                          errors.customerPhone
-                            ? 'border-[#141414] bg-[#F9F9F9]'
-                            : 'border-gray-300 focus:border-[#093624]'
-                        }`}
-                      />
-                    </div>
-                    {errors.customerPhone && (
-                      <p className="mt-1 text-xs text-[#141414] font-satoshi-med flex items-center gap-1">
-                        <AlertCircle size={12} className="text-[#093624]" />
-                        <span>{errors.customerPhone}</span>
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 2: Delivery Address */}
-              <div className="border border-gray-200 rounded-xs p-6 sm:p-8 bg-white space-y-5">
-                <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
-                  <div className="w-8 h-8 rounded-full bg-[#093624] text-[#F9F295] flex items-center justify-center text-xs font-bold font-satoshi-bold">
-                    02
-                  </div>
-                  <div>
-                    <h2 className="text-base sm:text-lg font-bold font-satoshi-bold text-[#141414]">
-                      Delivery Address
-                    </h2>
-                    <p className="text-xs text-[#6D6868]">
-                      Fast doorstep delivery across Dhaka and all 64 districts of Bangladesh.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Delivery Zone Selection */}
-                <div className="space-y-2">
-                  <span className="block text-xs font-bold uppercase tracking-wider text-[#141414] font-satoshi-bold">
-                    Shipping Zone (Auto-assigned by District)
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => handleDistrictChange('Dhaka')}
-                      className={`p-3.5 rounded-xs border text-left transition-all cursor-pointer flex items-center justify-between ${
-                        shippingZone === 'inside_dhaka'
-                          ? 'border-[#093624] bg-[#093624]/5 ring-1 ring-[#093624]'
-                          : 'border-gray-200 bg-white hover:border-gray-400'
-                      }`}
-                    >
-                      <div>
-                        <span className="block text-xs sm:text-sm font-bold text-[#141414] font-satoshi-bold">
-                          Inside Dhaka
-                        </span>
-                        <span className="text-[11px] text-[#6D6868]">
-                          24–48 hours express delivery
-                        </span>
+              {/* STEP 1: Customer Contact & Delivery Address */}
+              {checkoutStep === 1 && (
+                <>
+                  {/* Section 1: Customer Contact Information */}
+                  <div className="border border-gray-200 rounded-xs p-6 sm:p-8 bg-white space-y-5">
+                    <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
+                      <div className="w-8 h-8 rounded-full bg-[#093624] text-[#F9F295] flex items-center justify-center text-xs font-bold font-satoshi-bold">
+                        01
                       </div>
-                      <div className="text-right">
-                        {isFreeShippingEligible ? (
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs text-gray-400 line-through font-satoshi tabular-nums">
-                              {formatPrice(settings.shippingInsideDhaka ?? 60)}
-                            </span>
-                            <span className="text-xs font-bold text-[#093624] font-satoshi-bold uppercase tracking-wider bg-[#F9F295] px-1.5 py-0.5 rounded-2xs">
-                              Free
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-xs font-bold text-[#093624] tabular-nums font-satoshi-bold">
-                            {formatPrice(settings.shippingInsideDhaka ?? 60)}
+                      <div>
+                        <h2 className="text-base sm:text-lg font-bold font-satoshi-bold text-[#141414]">
+                          Customer & Contact Information
+                        </h2>
+                        <p className="text-xs text-[#6D6868]">
+                          Used for order confirmation and courier delivery updates.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      <div className="sm:col-span-2">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label
+                            htmlFor="checkout-name"
+                            className="block text-xs font-bold uppercase tracking-wider text-[#141414] font-satoshi-bold"
+                          >
+                            Full Name *
+                          </label>
+                          <span className="text-[11px] text-[#6D6868] tabular-nums">
+                            {customerName.length}/50
                           </span>
+                        </div>
+                        <div className="relative">
+                          <User
+                            size={16}
+                            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+                          />
+                          <input
+                            id="checkout-name"
+                            type="text"
+                            maxLength={50}
+                            value={customerName}
+                            onChange={(e) => {
+                              setCustomerName(e.target.value);
+                              if (errors.customerName)
+                                setErrors((prev) => ({ ...prev, customerName: undefined }));
+                            }}
+                            placeholder="e.g. Tanvir Rahman"
+                            className={`w-full h-12 pl-10 pr-4 bg-white border rounded-xs text-sm text-[#141414] placeholder:text-gray-400 focus:outline-none transition-colors ${
+                              errors.customerName
+                                ? 'border-[#141414] bg-[#F9F9F9]'
+                                : 'border-gray-300 focus:border-[#093624]'
+                            }`}
+                          />
+                        </div>
+                        {errors.customerName && (
+                          <p className="mt-1 text-xs text-[#141414] font-satoshi-med flex items-center gap-1">
+                            <AlertCircle size={12} className="text-[#093624]" />
+                            <span>{errors.customerName}</span>
+                          </p>
                         )}
                       </div>
-                    </button>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (district === 'Dhaka') {
-                          handleDistrictChange('Chattogram');
-                        }
-                      }}
-                      className={`p-3.5 rounded-xs border text-left transition-all cursor-pointer flex items-center justify-between ${
-                        shippingZone === 'outside_dhaka'
-                          ? 'border-[#093624] bg-[#093624]/5 ring-1 ring-[#093624]'
-                          : 'border-gray-200 bg-white hover:border-gray-400'
-                      }`}
-                    >
                       <div>
-                        <span className="block text-xs sm:text-sm font-bold text-[#141414] font-satoshi-bold">
-                          Outside Dhaka
-                        </span>
-                        <span className="text-[11px] text-[#6D6868]">
-                          3–5 days nationwide courier
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        {isFreeShippingEligible ? (
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs text-gray-400 line-through font-satoshi tabular-nums">
-                              {formatPrice(settings.shippingOutsideDhaka ?? 120)}
-                            </span>
-                            <span className="text-xs font-bold text-[#093624] font-satoshi-bold uppercase tracking-wider bg-[#F9F295] px-1.5 py-0.5 rounded-2xs">
-                              Free
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-xs font-bold text-[#093624] tabular-nums font-satoshi-bold">
-                            {formatPrice(settings.shippingOutsideDhaka ?? 120)}
-                          </span>
+                        <label
+                          htmlFor="checkout-email"
+                          className="block text-xs font-bold uppercase tracking-wider text-[#141414] mb-1.5 font-satoshi-bold"
+                        >
+                          Email Address *
+                        </label>
+                        <input
+                          id="checkout-email"
+                          type="email"
+                          maxLength={80}
+                          value={customerEmail}
+                          onChange={(e) => {
+                            setCustomerEmail(e.target.value);
+                            if (errors.customerEmail)
+                              setErrors((prev) => ({ ...prev, customerEmail: undefined }));
+                          }}
+                          placeholder="you@example.com (real email only)"
+                          className={`w-full h-12 px-4 bg-white border rounded-xs text-sm text-[#141414] placeholder:text-gray-400 focus:outline-none transition-colors ${
+                            errors.customerEmail
+                              ? 'border-[#141414] bg-[#F9F9F9]'
+                              : 'border-gray-300 focus:border-[#093624]'
+                          }`}
+                        />
+                        {errors.customerEmail && (
+                          <p className="mt-1 text-xs text-[#141414] font-satoshi-med flex items-center gap-1">
+                            <AlertCircle size={12} className="text-[#093624]" />
+                            <span>{errors.customerEmail}</span>
+                          </p>
                         )}
                       </div>
-                    </button>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div className="sm:col-span-2">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label
-                        htmlFor="checkout-address"
-                        className="block text-xs font-bold uppercase tracking-wider text-[#141414] font-satoshi-bold"
-                      >
-                        Street Address (House, Road, Flat, Area details) *
-                      </label>
-                      <span className="text-[11px] text-[#6D6868] tabular-nums">
-                        {customerAddress.length}/150
+                      <div>
+                        <label
+                          htmlFor="checkout-phone"
+                          className="block text-xs font-bold uppercase tracking-wider text-[#141414] mb-1.5 font-satoshi-bold"
+                        >
+                          Phone Number *
+                        </label>
+                        <div className="relative">
+                          <Phone
+                            size={15}
+                            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+                          />
+                          <input
+                            id="checkout-phone"
+                            type="tel"
+                            maxLength={14}
+                            value={customerPhone}
+                            onChange={(e) => {
+                              setCustomerPhone(e.target.value);
+                              if (errors.customerPhone)
+                                setErrors((prev) => ({ ...prev, customerPhone: undefined }));
+                            }}
+                            placeholder="017XXXXXXXX"
+                            className={`w-full h-12 pl-10 pr-4 bg-white border rounded-xs text-sm text-[#141414] placeholder:text-gray-400 focus:outline-none transition-colors ${
+                              errors.customerPhone
+                                ? 'border-[#141414] bg-[#F9F9F9]'
+                                : 'border-gray-300 focus:border-[#093624]'
+                            }`}
+                          />
+                        </div>
+                        {errors.customerPhone && (
+                          <p className="mt-1 text-xs text-[#141414] font-satoshi-med flex items-center gap-1">
+                            <AlertCircle size={12} className="text-[#093624]" />
+                            <span>{errors.customerPhone}</span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 2: Delivery Address */}
+                  <div className="border border-gray-200 rounded-xs p-6 sm:p-8 bg-white space-y-5">
+                    <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
+                      <div className="w-8 h-8 rounded-full bg-[#093624] text-[#F9F295] flex items-center justify-center text-xs font-bold font-satoshi-bold">
+                        02
+                      </div>
+                      <div>
+                        <h2 className="text-base sm:text-lg font-bold font-satoshi-bold text-[#141414]">
+                          Delivery Address
+                        </h2>
+                        <p className="text-xs text-[#6D6868]">
+                          Fast doorstep delivery across Dhaka and all 64 districts of Bangladesh.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Delivery Zone Selection */}
+                    <div className="space-y-2">
+                      <span className="block text-xs font-bold uppercase tracking-wider text-[#141414] font-satoshi-bold">
+                        Shipping Zone (Auto-assigned by District)
                       </span>
-                    </div>
-                    <div className="relative">
-                      <MapPin
-                        size={16}
-                        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
-                      />
-                      <input
-                        id="checkout-address"
-                        type="text"
-                        maxLength={150}
-                        value={customerAddress}
-                        onChange={(e) => {
-                          setCustomerAddress(e.target.value);
-                          if (errors.customerAddress)
-                            setErrors((prev) => ({ ...prev, customerAddress: undefined }));
-                        }}
-                        placeholder="e.g. House 42, Road 11, Block D, Apt 4B"
-                        className={`w-full h-12 pl-10 pr-4 bg-white border rounded-xs text-sm text-[#141414] placeholder:text-gray-400 focus:outline-none transition-colors ${
-                          errors.customerAddress
-                            ? 'border-[#141414] bg-[#F9F9F9]'
-                            : 'border-gray-300 focus:border-[#093624]'
-                        }`}
-                      />
-                    </div>
-                    {errors.customerAddress && (
-                      <p className="mt-1 text-xs text-[#141414] font-satoshi-med flex items-center gap-1">
-                        <AlertCircle size={12} className="text-[#093624]" />
-                        <span>{errors.customerAddress}</span>
-                      </p>
-                    )}
-                  </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleDistrictChange('Dhaka')}
+                          className={`p-3.5 rounded-xs border text-left transition-all cursor-pointer flex items-center justify-between ${
+                            shippingZone === 'inside_dhaka'
+                              ? 'border-[#093624] bg-[#093624]/5 ring-1 ring-[#093624]'
+                              : 'border-gray-200 bg-white hover:border-gray-400'
+                          }`}
+                        >
+                          <div>
+                            <span className="block text-xs sm:text-sm font-bold text-[#141414] font-satoshi-bold">
+                              Inside Dhaka
+                            </span>
+                            <span className="text-[11px] text-[#6D6868]">
+                              24–48 hours express delivery
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            {isFreeShippingEligible ? (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs text-gray-400 line-through font-satoshi tabular-nums">
+                                  {formatPrice(settings.shippingInsideDhaka ?? 60)}
+                                </span>
+                                <span className="text-xs font-bold text-[#093624] font-satoshi-bold uppercase tracking-wider bg-[#F9F295] px-1.5 py-0.5 rounded-2xs">
+                                  Free
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-xs font-bold text-[#093624] tabular-nums font-satoshi-bold">
+                                {formatPrice(settings.shippingInsideDhaka ?? 60)}
+                              </span>
+                            )}
+                          </div>
+                        </button>
 
-                  {/* District Dropdown (64 districts grouped by division) */}
-                  <div>
-                    <label
-                      htmlFor="checkout-district"
-                      className="block text-xs font-bold uppercase tracking-wider text-[#141414] mb-1.5 font-satoshi-bold"
-                    >
-                      City / District *
-                    </label>
-                    <div className="relative">
-                      <select
-                        id="checkout-district"
-                        value={district}
-                        onChange={(e) => handleDistrictChange(e.target.value)}
-                        className={`w-full h-12 px-4 pr-10 bg-white border rounded-xs text-sm text-[#141414] focus:outline-none transition-colors appearance-none cursor-pointer ${
-                          errors.city
-                            ? 'border-[#141414] bg-[#F9F9F9]'
-                            : 'border-gray-300 focus:border-[#093624]'
-                        }`}
-                      >
-                        {Array.from(new Set(BD_GEO_LOCATIONS.map((d) => d.division))).map((divName) => (
-                          <optgroup key={divName} label={`${divName} Division`}>
-                            {BD_GEO_LOCATIONS.filter((d) => d.division === divName).map((d) => (
-                              <option key={d.district} value={d.district}>
-                                {d.district}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (district === 'Dhaka') {
+                              handleDistrictChange('Chattogram');
+                            }
+                          }}
+                          className={`p-3.5 rounded-xs border text-left transition-all cursor-pointer flex items-center justify-between ${
+                            shippingZone === 'outside_dhaka'
+                              ? 'border-[#093624] bg-[#093624]/5 ring-1 ring-[#093624]'
+                              : 'border-gray-200 bg-white hover:border-gray-400'
+                          }`}
+                        >
+                          <div>
+                            <span className="block text-xs sm:text-sm font-bold text-[#141414] font-satoshi-bold">
+                              Outside Dhaka
+                            </span>
+                            <span className="text-[11px] text-[#6D6868]">
+                              3–5 days nationwide courier
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            {isFreeShippingEligible ? (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs text-gray-400 line-through font-satoshi tabular-nums">
+                                  {formatPrice(settings.shippingOutsideDhaka ?? 120)}
+                                </span>
+                                <span className="text-xs font-bold text-[#093624] font-satoshi-bold uppercase tracking-wider bg-[#F9F295] px-1.5 py-0.5 rounded-2xs">
+                                  Free
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-xs font-bold text-[#093624] tabular-nums font-satoshi-bold">
+                                {formatPrice(settings.shippingOutsideDhaka ?? 120)}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      <div className="sm:col-span-2">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label
+                            htmlFor="checkout-address"
+                            className="block text-xs font-bold uppercase tracking-wider text-[#141414] font-satoshi-bold"
+                          >
+                            Street Address (House, Road, Flat, Area details) *
+                          </label>
+                          <span className="text-[11px] text-[#6D6868] tabular-nums">
+                            {customerAddress.length}/150
+                          </span>
+                        </div>
+                        <div className="relative">
+                          <MapPin
+                            size={16}
+                            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+                          />
+                          <input
+                            id="checkout-address"
+                            type="text"
+                            maxLength={150}
+                            value={customerAddress}
+                            onChange={(e) => {
+                              setCustomerAddress(e.target.value);
+                              if (errors.customerAddress)
+                                setErrors((prev) => ({ ...prev, customerAddress: undefined }));
+                            }}
+                            placeholder="e.g. House 42, Road 11, Block D, Apt 4B"
+                            className={`w-full h-12 pl-10 pr-4 bg-white border rounded-xs text-sm text-[#141414] placeholder:text-gray-400 focus:outline-none transition-colors ${
+                              errors.customerAddress
+                                ? 'border-[#141414] bg-[#F9F9F9]'
+                                : 'border-gray-300 focus:border-[#093624]'
+                            }`}
+                          />
+                        </div>
+                        {errors.customerAddress && (
+                          <p className="mt-1 text-xs text-[#141414] font-satoshi-med flex items-center gap-1">
+                            <AlertCircle size={12} className="text-[#093624]" />
+                            <span>{errors.customerAddress}</span>
+                          </p>
+                        )}
+                      </div>
+
+                      {/* District Dropdown (64 districts grouped by division) */}
+                      <div>
+                        <label
+                          htmlFor="checkout-district"
+                          className="block text-xs font-bold uppercase tracking-wider text-[#141414] mb-1.5 font-satoshi-bold"
+                        >
+                          City / District *
+                        </label>
+                        <div className="relative">
+                          <select
+                            id="checkout-district"
+                            value={district}
+                            onChange={(e) => handleDistrictChange(e.target.value)}
+                            className={`w-full h-12 px-4 pr-10 bg-white border rounded-xs text-sm text-[#141414] focus:outline-none transition-colors appearance-none cursor-pointer ${
+                              errors.city
+                                ? 'border-[#141414] bg-[#F9F9F9]'
+                                : 'border-gray-300 focus:border-[#093624]'
+                            }`}
+                          >
+                            {Array.from(new Set(BD_GEO_LOCATIONS.map((d) => d.division))).map((divName) => (
+                              <optgroup key={divName} label={`${divName} Division`}>
+                                {BD_GEO_LOCATIONS.filter((d) => d.division === divName).map((d) => (
+                                  <option key={d.district} value={d.district}>
+                                    {d.district}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            ))}
+                          </select>
+                          <ChevronDown
+                            size={16}
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                          />
+                        </div>
+                        {errors.city && (
+                          <p className="mt-1 text-xs text-[#141414] font-satoshi-med flex items-center gap-1">
+                            <AlertCircle size={12} className="text-[#093624]" />
+                            <span>{errors.city}</span>
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Area / Thana Dropdown based on selected district */}
+                      <div>
+                        <label
+                          htmlFor="checkout-area"
+                          className="block text-xs font-bold uppercase tracking-wider text-[#141414] mb-1.5 font-satoshi-bold"
+                        >
+                          Area / Thana / Upazila *
+                        </label>
+                        <div className="relative">
+                          <select
+                            id="checkout-area"
+                            value={area}
+                            onChange={(e) => handleThanaChange(e.target.value)}
+                            className={`w-full h-12 px-4 pr-10 bg-white border rounded-xs text-sm text-[#141414] focus:outline-none transition-colors appearance-none cursor-pointer ${
+                              errors.area
+                                ? 'border-[#141414] bg-[#F9F9F9]'
+                                : 'border-gray-300 focus:border-[#093624]'
+                            }`}
+                          >
+                            <option value="" disabled>
+                              Select Area / Thana
+                            </option>
+                            {currentDistrictData?.thanaList.map((thana) => (
+                              <option key={thana.name} value={thana.name}>
+                                {thana.name} {thana.postcode ? `(${thana.postcode})` : ''}
                               </option>
                             ))}
-                          </optgroup>
-                        ))}
-                      </select>
-                      <ChevronDown
-                        size={16}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                      />
-                    </div>
-                    {errors.city && (
-                      <p className="mt-1 text-xs text-[#141414] font-satoshi-med flex items-center gap-1">
-                        <AlertCircle size={12} className="text-[#093624]" />
-                        <span>{errors.city}</span>
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Area / Thana Dropdown based on selected district */}
-                  <div>
-                    <label
-                      htmlFor="checkout-area"
-                      className="block text-xs font-bold uppercase tracking-wider text-[#141414] mb-1.5 font-satoshi-bold"
-                    >
-                      Area / Thana / Upazila *
-                    </label>
-                    <div className="relative">
-                      <select
-                        id="checkout-area"
-                        value={area}
-                        onChange={(e) => handleThanaChange(e.target.value)}
-                        className={`w-full h-12 px-4 pr-10 bg-white border rounded-xs text-sm text-[#141414] focus:outline-none transition-colors appearance-none cursor-pointer ${
-                          errors.area
-                            ? 'border-[#141414] bg-[#F9F9F9]'
-                            : 'border-gray-300 focus:border-[#093624]'
-                        }`}
-                      >
-                        <option value="" disabled>
-                          Select Area / Thana
-                        </option>
-                        {currentDistrictData?.thanaList.map((thana) => (
-                          <option key={thana.name} value={thana.name}>
-                            {thana.name} {thana.postcode ? `(${thana.postcode})` : ''}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown
-                        size={16}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                      />
-                    </div>
-                    {errors.area && (
-                      <p className="mt-1 text-xs text-[#141414] font-satoshi-med flex items-center gap-1">
-                        <AlertCircle size={12} className="text-[#093624]" />
-                        <span>{errors.area}</span>
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="checkout-postal"
-                      className="block text-xs font-bold uppercase tracking-wider text-[#141414] mb-1.5 font-satoshi-bold"
-                    >
-                      Postal Code (Auto-populated)
-                    </label>
-                    <input
-                      id="checkout-postal"
-                      type="text"
-                      maxLength={10}
-                      value={postalCode}
-                      onChange={(e) => setPostalCode(e.target.value)}
-                      placeholder="e.g. 1213"
-                      className="w-full h-12 px-4 bg-white border border-gray-300 rounded-xs text-sm text-[#141414] placeholder:text-gray-400 focus:outline-none focus:border-[#093624] transition-colors"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label
-                        htmlFor="checkout-note"
-                        className="block text-xs font-bold uppercase tracking-wider text-[#141414] font-satoshi-bold"
-                      >
-                        Delivery Note (Optional)
-                      </label>
-                      <span className="text-[11px] text-[#6D6868] tabular-nums">
-                        {note.length}/200
-                      </span>
-                    </div>
-                    <input
-                      id="checkout-note"
-                      type="text"
-                      maxLength={200}
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      placeholder="e.g. Call before arrival"
-                      className="w-full h-12 px-4 bg-white border border-gray-300 rounded-xs text-sm text-[#141414] placeholder:text-gray-400 focus:outline-none focus:border-[#093624] transition-colors"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 3: Payment Method (Strictly bKash & Cash on Delivery) */}
-              <div className="border border-gray-200 rounded-xs p-6 sm:p-8 bg-white space-y-5">
-                <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
-                  <div className="w-8 h-8 rounded-full bg-[#093624] text-[#F9F295] flex items-center justify-center text-xs font-bold font-satoshi-bold">
-                    03
-                  </div>
-                  <div>
-                    <h2 className="text-base sm:text-lg font-bold font-satoshi-bold text-[#141414]">
-                      Payment Method
-                    </h2>
-                    <p className="text-xs text-[#6D6868]">
-                      Choose between instant bKash verification or Cash on Delivery.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Payment Method Options */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Option A: bKash */}
-                  {(settings.paymentBkash !== false) && (
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('bKash')}
-                      className={`p-4 rounded-xs border text-left transition-all cursor-pointer flex items-start gap-3 ${
-                        paymentMethod === 'bKash'
-                          ? 'border-[#093624] bg-[#093624] text-[#F9F295] shadow-xs'
-                          : 'border-gray-200 bg-white text-[#141414] hover:border-[#093624]'
-                      }`}
-                    >
-                      <div
-                        className={`w-10 h-10 rounded-xs flex items-center justify-center shrink-0 ${
-                          paymentMethod === 'bKash'
-                            ? 'bg-[#F9F295] text-[#093624]'
-                            : 'bg-[#F1EFEE] text-[#093624]'
-                        }`}
-                      >
-                        <Smartphone size={18} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm font-bold font-satoshi-bold">bKash</span>
-                          {paymentMethod === 'bKash' && <Check size={16} />}
+                          </select>
+                          <ChevronDown
+                            size={16}
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                          />
                         </div>
-                        <p
-                          className={`text-xs mt-0.5 ${
-                            paymentMethod === 'bKash' ? 'text-white/85' : 'text-[#6D6868]'
-                          }`}
-                        >
-                          Instant mobile wallet payment
-                        </p>
+                        {errors.area && (
+                          <p className="mt-1 text-xs text-[#141414] font-satoshi-med flex items-center gap-1">
+                            <AlertCircle size={12} className="text-[#093624]" />
+                            <span>{errors.area}</span>
+                          </p>
+                        )}
                       </div>
-                    </button>
-                  )}
 
-                  {/* Option B: Cash on Delivery */}
-                  {(settings.paymentCOD !== false) && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPaymentMethod('Cash on Delivery');
-                        setErrors((prev) => ({
-                          ...prev,
-                          bkashNumber: undefined,
-                          bkashTransactionId: undefined,
-                        }));
-                      }}
-                      className={`p-4 rounded-xs border text-left transition-all cursor-pointer flex items-start gap-3 ${
-                        paymentMethod === 'Cash on Delivery'
-                          ? 'border-[#093624] bg-[#093624] text-[#F9F295] shadow-xs'
-                          : 'border-gray-200 bg-white text-[#141414] hover:border-[#093624]'
-                      }`}
-                    >
-                      <div
-                        className={`w-10 h-10 rounded-xs flex items-center justify-center shrink-0 ${
-                          paymentMethod === 'Cash on Delivery'
-                            ? 'bg-[#F9F295] text-[#093624]'
-                            : 'bg-[#F1EFEE] text-[#093624]'
-                        }`}
-                      >
-                        <Banknote size={18} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm font-bold font-satoshi-bold">
-                            Cash on Delivery (COD)
-                          </span>
-                          {paymentMethod === 'Cash on Delivery' && <Check size={16} />}
-                        </div>
-                        <p
-                          className={`text-xs mt-0.5 ${
-                            paymentMethod === 'Cash on Delivery' ? 'text-white/85' : 'text-[#6D6868]'
-                          }`}
-                        >
-                          Pay in cash upon delivery
-                        </p>
-                      </div>
-                    </button>
-                  )}
-                </div>
-
-                {/* Dynamic Payment Instructions Panel */}
-                {paymentMethod === 'bKash' ? (
-                  <div className="bg-[#F9F9F9] border border-gray-200 rounded-xs p-5 space-y-4">
-                    <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-gray-200">
                       <div>
-                        <h3 className="text-xs sm:text-sm font-bold text-[#093624] font-satoshi-bold">
-                          bKash Payment Verification
-                        </h3>
-                        <p className="text-xs text-[#6D6868] mt-0.5">
-                          Send <strong className="text-[#141414] tabular-nums">{formatPrice(finalTotal)}</strong> to our official bKash Merchant account and enter your transaction reference.
-                        </p>
+                        <label
+                          htmlFor="checkout-postal"
+                          className="block text-xs font-bold uppercase tracking-wider text-[#141414] mb-1.5 font-satoshi-bold"
+                        >
+                          Postal Code (Auto-populated)
+                        </label>
+                        <input
+                          id="checkout-postal"
+                          type="text"
+                          maxLength={10}
+                          value={postalCode}
+                          onChange={(e) => setPostalCode(e.target.value)}
+                          placeholder="e.g. 1213"
+                          className="w-full h-12 px-4 bg-white border border-gray-300 rounded-xs text-sm text-[#141414] placeholder:text-gray-400 focus:outline-none focus:border-[#093624] transition-colors"
+                        />
                       </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label
+                            htmlFor="checkout-note"
+                            className="block text-xs font-bold uppercase tracking-wider text-[#141414] font-satoshi-bold"
+                          >
+                            Delivery Note (Optional)
+                          </label>
+                          <span className="text-[11px] text-[#6D6868] tabular-nums">
+                            {note.length}/200
+                          </span>
+                        </div>
+                        <input
+                          id="checkout-note"
+                          type="text"
+                          maxLength={200}
+                          value={note}
+                          onChange={(e) => setNote(e.target.value)}
+                          placeholder="e.g. Call before arrival"
+                          className="w-full h-12 px-4 bg-white border border-gray-300 rounded-xs text-sm text-[#141414] placeholder:text-gray-400 focus:outline-none focus:border-[#093624] transition-colors"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Step 1 Primary Action */}
+                    <div className="pt-5 border-t border-gray-100 flex items-center justify-between">
                       <button
                         type="button"
-                        onClick={handleFillDemoBkash}
-                        className="text-[11px] font-bold font-satoshi-bold text-[#093624] bg-[#F9F295] hover:bg-[#fae968] px-3 py-1.5 rounded-xs transition-colors cursor-pointer"
+                        onClick={() =>
+                          isBuyNow
+                            ? navigate(`/product/${buyNowItem?.product.id || ''}`)
+                            : navigate('/cart')
+                        }
+                        className="inline-flex items-center gap-1.5 text-xs text-[#6D6868] hover:text-[#093624] font-satoshi-bold cursor-pointer"
                       >
-                        Auto-Fill Sample TrxID
+                        <ArrowLeft size={13} />
+                        <span>{isBuyNow ? 'Return to Product' : 'Return to Cart'}</span>
                       </button>
-                    </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white border border-gray-200 p-3.5 rounded-xs text-xs">
-                      <div>
-                        <span className="text-[#6D6868] block">Merchant bKash Number</span>
-                        <span className="font-mono font-bold text-[#141414] text-sm">
-                          01700-000000
-                        </span>
+                      
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* STEP 2: Payment Method (Transferred to dedicated Next Step) */}
+              {checkoutStep === 2 && (
+                <div className="border border-gray-200 rounded-xs p-6 sm:p-8 bg-white space-y-6">
+                  {/* Summary of delivery info from Step 1 */}
+                  <div className="bg-[#F9F9F9] border border-gray-200 rounded-xs p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                    <div>
+                      <span className="text-[#6D6868] block">Delivering to:</span>
+                      <strong className="text-[#141414] font-satoshi-bold text-sm block">
+                        {customerName} ({customerPhone})
+                      </strong>
+                      <p className="text-[#55585B] mt-0.5">
+                        {customerAddress}, {area}, {district} {postalCode && `(${postalCode})`}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleBackToAddress}
+                      className="text-[#093624] font-satoshi-bold hover:underline cursor-pointer self-start sm:self-auto shrink-0"
+                    >
+                      Edit Address
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
+                    <div className="w-8 h-8 rounded-full bg-[#093624] text-[#F9F295] flex items-center justify-center text-xs font-bold font-satoshi-bold">
+                      02
+                    </div>
+                    <div>
+                      <h2 className="text-base sm:text-lg font-bold font-satoshi-bold text-[#141414]">
+                        Payment Method
+                      </h2>
+                      <p className="text-xs text-[#6D6868]">
+                        Choose between instant bKash verification or Cash on Delivery.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Payment Method Options */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Option A: bKash */}
+                    {settings.paymentBkash !== false && (
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('bKash')}
+                        className={`p-4 rounded-xs border text-left transition-all cursor-pointer flex items-start gap-3 ${
+                          paymentMethod === 'bKash'
+                            ? 'border-[#093624] bg-[#093624] text-[#F9F295] shadow-xs'
+                            : 'border-gray-200 bg-white text-[#141414] hover:border-[#093624]'
+                        }`}
+                      >
+                        <div
+                          className={`w-10 h-10 rounded-xs flex items-center justify-center shrink-0 ${
+                            paymentMethod === 'bKash'
+                              ? 'bg-[#F9F295] text-[#093624]'
+                              : 'bg-[#F1EFEE] text-[#093624]'
+                          }`}
+                        >
+                          <Smartphone size={18} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-bold font-satoshi-bold">bKash</span>
+                            {paymentMethod === 'bKash' && <Check size={16} />}
+                          </div>
+                          <p
+                            className={`text-xs mt-0.5 ${
+                              paymentMethod === 'bKash' ? 'text-white/85' : 'text-[#6D6868]'
+                            }`}
+                          >
+                            Instant mobile wallet payment
+                          </p>
+                        </div>
+                      </button>
+                    )}
+
+                    {/* Option B: Cash on Delivery */}
+                    {settings.paymentCOD !== false && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPaymentMethod('Cash on Delivery');
+                          setErrors((prev) => ({
+                            ...prev,
+                            bkashNumber: undefined,
+                            bkashTransactionId: undefined,
+                          }));
+                        }}
+                        className={`p-4 rounded-xs border text-left transition-all cursor-pointer flex items-start gap-3 ${
+                          paymentMethod === 'Cash on Delivery'
+                            ? 'border-[#093624] bg-[#093624] text-[#F9F295] shadow-xs'
+                            : 'border-gray-200 bg-white text-[#141414] hover:border-[#093624]'
+                        }`}
+                      >
+                        <div
+                          className={`w-10 h-10 rounded-xs flex items-center justify-center shrink-0 ${
+                            paymentMethod === 'Cash on Delivery'
+                              ? 'bg-[#F9F295] text-[#093624]'
+                              : 'bg-[#F1EFEE] text-[#093624]'
+                          }`}
+                        >
+                          <Banknote size={18} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-bold font-satoshi-bold">
+                              Cash on Delivery (COD)
+                            </span>
+                            {paymentMethod === 'Cash on Delivery' && <Check size={16} />}
+                          </div>
+                          <p
+                            className={`text-xs mt-0.5 ${
+                              paymentMethod === 'Cash on Delivery'
+                                ? 'text-white/85'
+                                : 'text-[#6D6868]'
+                            }`}
+                          >
+                            Pay in cash upon delivery
+                          </p>
+                        </div>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Dynamic Payment Instructions Panel */}
+                  {paymentMethod === 'bKash' ? (
+                    <div className="bg-[#F9F9F9] border border-gray-200 rounded-xs p-5 space-y-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-gray-200">
+                        <div>
+                          <h3 className="text-xs sm:text-sm font-bold text-[#093624] font-satoshi-bold">
+                            bKash Payment Verification
+                          </h3>
+                          <p className="text-xs text-[#6D6868] mt-0.5">
+                            Send{' '}
+                            <strong className="text-[#141414] tabular-nums">
+                              {formatPrice(finalTotal)}
+                            </strong>{' '}
+                            to our official bKash Merchant account and enter your transaction
+                            reference.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleFillDemoBkash}
+                          className="text-[11px] font-bold font-satoshi-bold text-[#093624] bg-[#F9F295] hover:bg-[#fae968] px-3 py-1.5 rounded-xs transition-colors cursor-pointer"
+                        >
+                          Auto-Fill Sample TrxID
+                        </button>
                       </div>
-                      <div>
-                        <span className="text-[#6D6868] block">Payable Amount</span>
-                        <span className="font-bold text-[#093624] text-sm tabular-nums">
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white border border-gray-200 p-3.5 rounded-xs text-xs">
+                        <div>
+                          <span className="text-[#6D6868] block">Merchant bKash Number</span>
+                          <span className="font-mono font-bold text-[#141414] text-sm">
+                            01700-000000
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[#6D6868] block">Payable Amount</span>
+                          <span className="font-bold text-[#093624] text-sm tabular-nums">
+                            {formatPrice(finalTotal)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label
+                              htmlFor="bkash-number"
+                              className="block text-xs font-bold uppercase tracking-wider text-[#141414] font-satoshi-bold"
+                            >
+                              Your bKash Number *
+                            </label>
+                            <span className="text-[11px] text-[#6D6868] tabular-nums">
+                              {bkashNumber.length}/14
+                            </span>
+                          </div>
+                          <input
+                            id="bkash-number"
+                            type="tel"
+                            maxLength={14}
+                            value={bkashNumber}
+                            onChange={(e) => {
+                              setBkashNumber(e.target.value);
+                              if (errors.bkashNumber)
+                                setErrors((prev) => ({ ...prev, bkashNumber: undefined }));
+                            }}
+                            placeholder="017XXXXXXXX"
+                            className={`w-full h-11 px-3.5 bg-white border rounded-xs text-sm text-[#141414] placeholder:text-gray-400 focus:outline-none ${
+                              errors.bkashNumber
+                                ? 'border-[#141414]'
+                                : 'border-gray-300 focus:border-[#093624]'
+                            }`}
+                          />
+                          {errors.bkashNumber && (
+                            <p className="mt-1 text-xs text-[#141414] font-satoshi-med flex items-center gap-1">
+                              <AlertCircle size={12} className="text-[#093624]" />
+                              <span>{errors.bkashNumber}</span>
+                            </p>
+                          )}
+                        </div>
+
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label
+                              htmlFor="bkash-trx"
+                              className="block text-xs font-bold uppercase tracking-wider text-[#141414] font-satoshi-bold"
+                            >
+                              bKash Transaction ID (TrxID) *
+                            </label>
+                            <span className="text-[11px] text-[#6D6868] tabular-nums">
+                              {bkashTransactionId.length}/20
+                            </span>
+                          </div>
+                          <input
+                            id="bkash-trx"
+                            type="text"
+                            maxLength={20}
+                            value={bkashTransactionId}
+                            onChange={(e) => {
+                              setBkashTransactionId(e.target.value.toUpperCase());
+                              if (errors.bkashTransactionId)
+                                setErrors((prev) => ({ ...prev, bkashTransactionId: undefined }));
+                            }}
+                            placeholder="e.g. 8N7A2K9P1X"
+                            className={`w-full h-11 px-3.5 bg-white border rounded-xs text-sm font-mono uppercase text-[#141414] placeholder:text-gray-400 placeholder:normal-case focus:outline-none ${
+                              errors.bkashTransactionId
+                                ? 'border-[#141414]'
+                                : 'border-gray-300 focus:border-[#093624]'
+                            }`}
+                          />
+                          {errors.bkashTransactionId && (
+                            <p className="mt-1 text-xs text-[#141414] font-satoshi-med flex items-center gap-1">
+                              <AlertCircle size={12} className="text-[#093624]" />
+                              <span>{errors.bkashTransactionId}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-[#F9F9F9] border border-gray-200 rounded-xs p-5 space-y-2.5 text-xs text-[#55585B]">
+                      <div className="flex items-center gap-2 text-[#093624] font-bold font-satoshi-bold text-sm">
+                        <Truck size={16} />
+                        <span>Cash on Delivery Confirmation</span>
+                      </div>
+                      <p className="leading-relaxed">
+                        You will pay{' '}
+                        <strong className="text-[#141414] tabular-nums">
                           {formatPrice(finalTotal)}
-                        </span>
-                      </div>
+                        </strong>{' '}
+                        in cash directly to our delivery rider upon receiving your parcel. Our courier
+                        partner will call your contact number prior to arrival.
+                      </p>
+                      <p className="text-[11px] text-[#6D6868]">
+                        Includes 7-day size or style exchange guarantee across Bangladesh.
+                      </p>
                     </div>
+                  )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <label
-                            htmlFor="bkash-number"
-                            className="block text-xs font-bold uppercase tracking-wider text-[#141414] font-satoshi-bold"
-                          >
-                            Your bKash Number *
-                          </label>
-                          <span className="text-[11px] text-[#6D6868] tabular-nums">
-                            {bkashNumber.length}/14
-                          </span>
-                        </div>
-                        <input
-                          id="bkash-number"
-                          type="tel"
-                          maxLength={14}
-                          value={bkashNumber}
-                          onChange={(e) => {
-                            setBkashNumber(e.target.value);
-                            if (errors.bkashNumber)
-                              setErrors((prev) => ({ ...prev, bkashNumber: undefined }));
-                          }}
-                          placeholder="017XXXXXXXX"
-                          className={`w-full h-11 px-3.5 bg-white border rounded-xs text-sm text-[#141414] placeholder:text-gray-400 focus:outline-none ${
-                            errors.bkashNumber
-                              ? 'border-[#141414]'
-                              : 'border-gray-300 focus:border-[#093624]'
-                          }`}
-                        />
-                        {errors.bkashNumber && (
-                          <p className="mt-1 text-xs text-[#141414] font-satoshi-med flex items-center gap-1">
-                            <AlertCircle size={12} className="text-[#093624]" />
-                            <span>{errors.bkashNumber}</span>
-                          </p>
-                        )}
-                      </div>
+                  <div className="pt-2 flex items-center justify-between border-t border-gray-100">
+                    <button
+                      type="button"
+                      onClick={handleBackToAddress}
+                      className="inline-flex items-center gap-1.5 text-xs text-[#6D6868] hover:text-[#093624] font-satoshi-bold cursor-pointer"
+                    >
+                      <ArrowLeft size={13} />
+                      <span>Back to Address</span>
+                    </button>
 
-                      <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <label
-                            htmlFor="bkash-trx"
-                            className="block text-xs font-bold uppercase tracking-wider text-[#141414] font-satoshi-bold"
-                          >
-                            bKash Transaction ID (TrxID) *
-                          </label>
-                          <span className="text-[11px] text-[#6D6868] tabular-nums">
-                            {bkashTransactionId.length}/20
-                          </span>
-                        </div>
-                        <input
-                          id="bkash-trx"
-                          type="text"
-                          maxLength={20}
-                          value={bkashTransactionId}
-                          onChange={(e) => {
-                            setBkashTransactionId(e.target.value.toUpperCase());
-                            if (errors.bkashTransactionId)
-                              setErrors((prev) => ({ ...prev, bkashTransactionId: undefined }));
-                          }}
-                          placeholder="e.g. 8N7A2K9P1X"
-                          className={`w-full h-11 px-3.5 bg-white border rounded-xs text-sm font-mono uppercase text-[#141414] placeholder:text-gray-400 placeholder:normal-case focus:outline-none ${
-                            errors.bkashTransactionId
-                              ? 'border-[#141414]'
-                              : 'border-gray-300 focus:border-[#093624]'
-                          }`}
-                        />
-                        {errors.bkashTransactionId && (
-                          <p className="mt-1 text-xs text-[#141414] font-satoshi-med flex items-center gap-1">
-                            <AlertCircle size={12} className="text-[#093624]" />
-                            <span>{errors.bkashTransactionId}</span>
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                    
                   </div>
-                ) : (
-                  <div className="bg-[#F9F9F9] border border-gray-200 rounded-xs p-5 space-y-2.5 text-xs text-[#55585B]">
-                    <div className="flex items-center gap-2 text-[#093624] font-bold font-satoshi-bold text-sm">
-                      <Truck size={16} />
-                      <span>Cash on Delivery Confirmation</span>
-                    </div>
-                    <p className="leading-relaxed">
-                      You will pay{' '}
-                      <strong className="text-[#141414] tabular-nums">
-                        {formatPrice(finalTotal)}
-                      </strong>{' '}
-                      in cash directly to our delivery rider upon receiving your parcel. Our courier partner will call your contact number prior to arrival.
-                    </p>
-                    <p className="text-[11px] text-[#6D6868]">
-                      Includes 7-day size or style exchange guarantee across Bangladesh.
-                    </p>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             {/* Right Column: Order Summary (5 cols) */}
@@ -1278,42 +1506,34 @@ export const CheckoutPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Place Order Button */}
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full h-13 bg-[#093624] hover:bg-[#052216] disabled:opacity-60 text-[#F9F295] hover:text-white font-bold text-xs uppercase tracking-wider rounded-xs flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer font-satoshi-bold"
-                >
-                  <Lock size={14} />
-                  <span>
-                    {isSubmitting
-                      ? 'Confirming Your Order...'
-                      : paymentMethod === 'bKash'
-                      ? `Confirm bKash Payment (${formatPrice(finalTotal)})`
-                      : `Place COD Order (${formatPrice(finalTotal)})`}
-                  </span>
-                </button>
-
-                {/* Back Link & Security Note */}
-                <div className="space-y-3 pt-1">
+                {/* Place Order or Continue to Payment Button */}
+                {checkoutStep === 1 ? (
                   <button
                     type="button"
-                    onClick={() =>
-                      isBuyNow
-                        ? navigate(`/product/${buyNowItem?.product.id || ''}`)
-                        : navigate('/cart')
-                    }
-                    className="w-full inline-flex items-center justify-center gap-1.5 text-xs text-[#6D6868] hover:text-[#093624] font-satoshi-med cursor-pointer"
+                    onClick={handleProceedToPayment}
+                    className="w-full h-13 bg-[#093624] hover:bg-[#052216] text-[#F9F295] hover:text-white font-bold text-xs uppercase tracking-wider rounded-xs flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer font-satoshi-bold"
                   >
-                    <ArrowLeft size={13} />
-                    <span>{isBuyNow ? 'Return to Product Details' : 'Back to Shopping Cart'}</span>
+                    <span>Continue to Payment</span>
+                    <ArrowRight size={15} />
                   </button>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full h-13 bg-[#093624] hover:bg-[#052216] disabled:opacity-60 text-[#F9F295] hover:text-white font-bold text-xs uppercase tracking-wider rounded-xs flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer font-satoshi-bold"
+                  >
+                    <Lock size={14} />
+                    <span>
+                      {isSubmitting
+                        ? 'Confirming Your Order...'
+                        : paymentMethod === 'bKash'
+                        ? `Confirm bKash Payment (${formatPrice(finalTotal)})`
+                        : `Place COD Order (${formatPrice(finalTotal)})`}
+                    </span>
+                  </button>
+                )}
 
-                  <div className="flex items-center justify-center gap-2 text-[11px] text-[#6D6868]">
-                    <ShieldCheck size={14} className="text-[#093624] shrink-0" />
-                    <span>Encrypted checkout · Unique tracking code generated upon confirmation</span>
-                  </div>
-                </div>
+              
               </div>
             </div>
           </form>

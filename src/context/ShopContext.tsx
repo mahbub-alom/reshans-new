@@ -620,6 +620,8 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const normalized = code.trim().toUpperCase();
     const found = coupons.find((c) => c.code.toUpperCase() === normalized && c.isActive);
     if (!found || subtotal < found.minSpend) return 0;
+    // Check if usage limit is reached
+    if (found.usageLimit && found.usageCount >= found.usageLimit) return 0;
     if (found.discountType === 'percentage') {
       return Math.round((subtotal * found.discountValue) / 100);
     }
@@ -634,9 +636,13 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!code) {
       return { success: false, message: 'Please enter a promo code.', discountAmount: 0 };
     }
-    const found = coupons.find((c) => c.code.toUpperCase() === code && c.isActive);
+    const found = coupons.find((c) => c.code.toUpperCase() === code);
     if (!found) {
       return { success: false, message: `Promo code "${code}" is invalid or expired.`, discountAmount: 0 };
+    }
+    // Check if usage limit is reached / expired
+    if ((found.usageLimit && found.usageCount >= found.usageLimit) || !found.isActive) {
+      return { success: false, message: 'coupon use limit over', discountAmount: 0 };
     }
     if (subtotal < found.minSpend) {
       return {
@@ -713,6 +719,27 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setOrders((prev) => [newOrder, ...prev]);
     setLastConfirmedOrder(newOrder);
     setTrackedCodeQuery(trackingCode);
+
+    // If a coupon was applied, increment its usage count and deactivate if usage limit reached
+    if (payload.couponCode) {
+      const cpnCode = payload.couponCode;
+      setCoupons((prev) =>
+        prev.map((c) => {
+          if (c.code.toUpperCase() === cpnCode.toUpperCase()) {
+            const nextUsage = c.usageCount + 1;
+            const isNowActive = nextUsage < c.usageLimit ? c.isActive : false;
+            return { ...c, usageCount: nextUsage, isActive: isNowActive };
+          }
+          return c;
+        })
+      );
+      // Also update in backend DB
+      fetch('/api/coupons', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: cpnCode, incrementUsage: true }),
+      }).catch((err) => console.warn('Could not increment coupon usage in DB:', err));
+    }
 
     if (payload.mode === 'buy-now') {
       setBuyNowItem(null);
@@ -955,16 +982,41 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     showToast(`Coupon "${cpn.code}" activated!`);
   };
 
-  const toggleCouponStatus = (id: string) => {
+  const toggleCouponStatus = async (id: string) => {
+    const target = coupons.find((c) => c.id === id);
+    const newStatus = target ? !target.isActive : false;
+
     setCoupons((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, isActive: !c.isActive } : c))
+      prev.map((c) => (c.id === id ? { ...c, isActive: newStatus } : c))
     );
-    showToast(`Coupon status toggled.`);
+    showToast(newStatus ? 'Coupon activated!' : 'Coupon deactivated!');
+
+    try {
+      await fetch('/api/coupons', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, isActive: newStatus }),
+      });
+    } catch (err) {
+      console.warn('Could not update coupon status in DB:', err);
+    }
   };
 
-  const deleteCoupon = (id: string) => {
+  const deleteCoupon = async (id: string) => {
+    const target = coupons.find((c) => c.id === id);
     setCoupons((prev) => prev.filter((c) => c.id !== id));
     showToast(`Coupon deleted.`);
+
+    try {
+      const url = target?.id
+        ? `/api/coupons?id=${encodeURIComponent(target.id)}`
+        : `/api/coupons?code=${encodeURIComponent(target?.code || id)}`;
+      await fetch(url, {
+        method: 'DELETE',
+      });
+    } catch (err) {
+      console.warn('Could not delete coupon from DB:', err);
+    }
   };
 
   // Admin Reviews
