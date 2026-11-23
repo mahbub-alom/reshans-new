@@ -44,10 +44,7 @@ export const CartPage: React.FC = () => {
   const progressPercent = Math.min(100, Math.round((cartTotal / freeShippingThreshold) * 100));
 
   const discountAmount = calculateDiscount(cartTotal, appliedCouponCode);
-  const estimatedShipping =
-    cartTotal === 0 || cartTotal >= freeShippingThreshold
-      ? 0
-      : settings.shippingInsideDhaka || 60;
+  const estimatedShipping = settings.shippingInsideDhaka ?? 60;
   const estimatedTotal = Math.max(0, cartTotal - discountAmount + estimatedShipping);
 
   const handleApplyCoupon = (e: React.FormEvent) => {

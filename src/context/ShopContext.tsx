@@ -216,20 +216,29 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
 
-  // Fetch global store settings dynamically from database on load
+  // Fetch global store settings and coupons dynamically from database on load
   useEffect(() => {
-    const fetchStoreSettings = async () => {
+    const fetchStoreSettingsAndCoupons = async () => {
       try {
-        const res = await fetch('/api/settings');
-        const data = await res.json();
-        if (data.success && data.settings) {
-          setSettings((prev) => ({ ...prev, ...data.settings }));
+        const [settingsRes, couponsRes] = await Promise.all([
+          fetch('/api/settings'),
+          fetch('/api/coupons'),
+        ]);
+
+        const settingsData = await settingsRes.json();
+        if (settingsData.success && settingsData.settings) {
+          setSettings((prev) => ({ ...prev, ...settingsData.settings }));
+        }
+
+        const couponsData = await couponsRes.json();
+        if (couponsData.success && couponsData.coupons) {
+          setCoupons(couponsData.coupons);
         }
       } catch (err) {
-        console.warn('Could not fetch settings from API, using defaults:', err);
+        console.warn('Could not fetch settings/coupons from API, using defaults:', err);
       }
     };
-    fetchStoreSettings();
+    fetchStoreSettingsAndCoupons();
   }, []);
 
   // Validate session on mount
@@ -921,7 +930,22 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Admin Coupons
-  const addCoupon = (cpn: Omit<Coupon, 'id' | 'usageCount'>) => {
+  const addCoupon = async (cpn: Omit<Coupon, 'id' | 'usageCount'>) => {
+    try {
+      const res = await fetch('/api/coupons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cpn),
+      });
+      const data = await res.json();
+      if (data.success && data.coupon) {
+        setCoupons((prev) => [data.coupon, ...prev]);
+        showToast(`Coupon "${cpn.code}" activated!`);
+        return;
+      }
+    } catch (err) {
+      console.warn('Could not post coupon to API, storing locally:', err);
+    }
     const newCoupon: Coupon = {
       ...cpn,
       id: `CPN-${Date.now().toString().slice(-4)}`,

@@ -94,12 +94,18 @@ export const CheckoutPage: React.FC = () => {
   const activeCoupon = isBuyNow ? buyNowCouponCode : appliedCouponCode;
   const discountAmount = calculateDiscount(subtotal, activeCoupon);
 
-  const freeThreshold = settings.freeShippingThreshold || 2500;
-  const baseShipping =
+  // Free shipping threshold from settings (defaults to 2500 BDT)
+  const freeThreshold = settings.freeShippingThreshold ?? 2500;
+  const isFreeShippingEligible = subtotal > 0 && subtotal >= freeThreshold;
+
+  // Exact shipping cost from website settings (Free if subtotal >= freeThreshold)
+  const baseShippingCost =
     shippingZone === 'inside_dhaka'
-      ? settings.shippingInsideDhaka || 60
-      : settings.shippingOutsideDhaka || 120;
-  const shippingCost = subtotal === 0 || subtotal >= freeThreshold ? 0 : baseShipping;
+      ? (settings.shippingInsideDhaka ?? 60)
+      : (settings.shippingOutsideDhaka ?? 120);
+
+  const shippingCost = isFreeShippingEligible ? 0 : baseShippingCost;
+
   const finalTotal = Math.max(0, subtotal - discountAmount + shippingCost);
 
   const handleApplyPromo = (e: React.FormEvent) => {
@@ -529,11 +535,22 @@ export const CheckoutPage: React.FC = () => {
                           24–48 hours express delivery
                         </span>
                       </div>
-                      <span className="text-xs font-bold text-[#093624] tabular-nums font-satoshi-bold">
-                        {subtotal >= freeThreshold
-                          ? 'Free'
-                          : formatPrice(settings.shippingInsideDhaka || 60)}
-                      </span>
+                      <div className="text-right">
+                        {isFreeShippingEligible ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs text-gray-400 line-through font-satoshi tabular-nums">
+                              {formatPrice(settings.shippingInsideDhaka ?? 60)}
+                            </span>
+                            <span className="text-xs font-bold text-[#093624] font-satoshi-bold uppercase tracking-wider bg-[#F9F295] px-1.5 py-0.5 rounded-2xs">
+                              Free
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs font-bold text-[#093624] tabular-nums font-satoshi-bold">
+                            {formatPrice(settings.shippingInsideDhaka ?? 60)}
+                          </span>
+                        )}
+                      </div>
                     </button>
 
                     <button
@@ -558,11 +575,22 @@ export const CheckoutPage: React.FC = () => {
                           3–5 days nationwide courier
                         </span>
                       </div>
-                      <span className="text-xs font-bold text-[#093624] tabular-nums font-satoshi-bold">
-                        {subtotal >= freeThreshold
-                          ? 'Free'
-                          : formatPrice(settings.shippingOutsideDhaka || 120)}
-                      </span>
+                      <div className="text-right">
+                        {isFreeShippingEligible ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs text-gray-400 line-through font-satoshi tabular-nums">
+                              {formatPrice(settings.shippingOutsideDhaka ?? 120)}
+                            </span>
+                            <span className="text-xs font-bold text-[#093624] font-satoshi-bold uppercase tracking-wider bg-[#F9F295] px-1.5 py-0.5 rounded-2xs">
+                              Free
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs font-bold text-[#093624] tabular-nums font-satoshi-bold">
+                            {formatPrice(settings.shippingOutsideDhaka ?? 120)}
+                          </span>
+                        )}
+                      </div>
                     </button>
                   </div>
                 </div>
@@ -1048,7 +1076,18 @@ export const CheckoutPage: React.FC = () => {
                       Shipping ({shippingZone === 'inside_dhaka' ? 'Inside Dhaka' : 'Outside Dhaka'})
                     </span>
                     <span className="font-bold text-[#093624] tabular-nums font-satoshi-bold">
-                      {shippingCost === 0 ? 'Free' : formatPrice(shippingCost)}
+                      {isFreeShippingEligible ? (
+                        <span className="flex items-center gap-1.5">
+                          <span className="text-gray-400 line-through text-xs font-satoshi">
+                            {formatPrice(baseShippingCost)}
+                          </span>
+                          <span className="bg-[#F9F295] text-[#093624] text-xs px-1.5 py-0.5 rounded-2xs font-satoshi-bold">
+                            FREE
+                          </span>
+                        </span>
+                      ) : (
+                        formatPrice(shippingCost)
+                      )}
                     </span>
                   </div>
 
