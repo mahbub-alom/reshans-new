@@ -17,9 +17,44 @@ export const AdminSettingsTab: React.FC = () => {
   const { settings, updateSettings, showToast } = useShop();
   const [formData, setFormData] = useState<WebsiteSettings>(settings);
 
+  // String state for shipping tariff inputs to prevent leading-zero (010) issues
+  const [insideDhakaStr, setInsideDhakaStr] = useState<string>(() =>
+    String(settings.shippingInsideDhaka ?? 60)
+  );
+  const [outsideDhakaStr, setOutsideDhakaStr] = useState<string>(() =>
+    String(settings.shippingOutsideDhaka ?? 120)
+  );
+  const [freeThresholdStr, setFreeThresholdStr] = useState<string>(() =>
+    String(settings.freeShippingThreshold ?? 2500)
+  );
+
+  // Sync string state if settings change dynamically from DB
+  React.useEffect(() => {
+    setFormData(settings);
+    setInsideDhakaStr(String(settings.shippingInsideDhaka ?? 60));
+    setOutsideDhakaStr(String(settings.shippingOutsideDhaka ?? 120));
+    setFreeThresholdStr(String(settings.freeShippingThreshold ?? 2500));
+  }, [settings]);
+
+  // Helper to sanitize numeric input and strip accidental leading zeros (e.g. "010" -> "10")
+  const sanitizeNumberInput = (raw: string): string => {
+    // Keep only digits
+    const digitsOnly = raw.replace(/[^\d]/g, '');
+    if (!digitsOnly) return '';
+    // Strip leading zeros unless it's just "0"
+    return String(Number(digitsOnly));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateSettings(formData);
+    const updatedPayload: WebsiteSettings = {
+      ...formData,
+      shippingInsideDhaka: insideDhakaStr === '' ? 0 : Number(insideDhakaStr),
+      shippingOutsideDhaka: outsideDhakaStr === '' ? 0 : Number(outsideDhakaStr),
+      freeShippingThreshold: freeThresholdStr === '' ? 0 : Number(freeThresholdStr),
+    };
+    setFormData(updatedPayload);
+    updateSettings(updatedPayload);
     showToast('Store settings saved successfully!');
   };
 
@@ -88,9 +123,7 @@ export const AdminSettingsTab: React.FC = () => {
             <h3 className="text-base font-bold font-satoshi-bold text-[#141414]">
               Courier & Shipping Tariffs (BDT ৳)
             </h3>
-            <p className="text-xs text-brand-body">
-              Automatic delivery fees applied during customer checkout
-            </p>
+           
           </div>
         </div>
 
@@ -100,12 +133,18 @@ export const AdminSettingsTab: React.FC = () => {
               Inside Dhaka Delivery (৳)
             </label>
             <input
-              type="number"
-              min={0}
-              value={formData.shippingInsideDhaka}
-              onChange={(e) =>
-                setFormData({ ...formData, shippingInsideDhaka: Number(e.target.value) })
-              }
+              type="text"
+              inputMode="numeric"
+              value={insideDhakaStr}
+              placeholder="e.g. 60"
+              onChange={(e) => {
+                const clean = sanitizeNumberInput(e.target.value);
+                setInsideDhakaStr(clean);
+                setFormData((prev) => ({
+                  ...prev,
+                  shippingInsideDhaka: clean === '' ? 0 : Number(clean),
+                }));
+              }}
               className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs focus:outline-none focus:border-[#093624]"
             />
           </div>
@@ -115,12 +154,18 @@ export const AdminSettingsTab: React.FC = () => {
               Outside Dhaka Delivery (৳)
             </label>
             <input
-              type="number"
-              min={0}
-              value={formData.shippingOutsideDhaka}
-              onChange={(e) =>
-                setFormData({ ...formData, shippingOutsideDhaka: Number(e.target.value) })
-              }
+              type="text"
+              inputMode="numeric"
+              value={outsideDhakaStr}
+              placeholder="e.g. 120"
+              onChange={(e) => {
+                const clean = sanitizeNumberInput(e.target.value);
+                setOutsideDhakaStr(clean);
+                setFormData((prev) => ({
+                  ...prev,
+                  shippingOutsideDhaka: clean === '' ? 0 : Number(clean),
+                }));
+              }}
               className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs focus:outline-none focus:border-[#093624]"
             />
           </div>
@@ -130,12 +175,18 @@ export const AdminSettingsTab: React.FC = () => {
               Free Delivery Threshold (৳)
             </label>
             <input
-              type="number"
-              min={0}
-              value={formData.freeShippingThreshold}
-              onChange={(e) =>
-                setFormData({ ...formData, freeShippingThreshold: Number(e.target.value) })
-              }
+              type="text"
+              inputMode="numeric"
+              value={freeThresholdStr}
+              placeholder="e.g. 2500"
+              onChange={(e) => {
+                const clean = sanitizeNumberInput(e.target.value);
+                setFreeThresholdStr(clean);
+                setFormData((prev) => ({
+                  ...prev,
+                  freeShippingThreshold: clean === '' ? 0 : Number(clean),
+                }));
+              }}
               className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs focus:outline-none focus:border-[#093624]"
             />
           </div>
@@ -150,9 +201,7 @@ export const AdminSettingsTab: React.FC = () => {
             <h3 className="text-base font-bold font-satoshi-bold text-[#141414]">
               Payment Gateways & Options
             </h3>
-            <p className="text-xs text-brand-body">
-              Enable or disable payment channels available to customers at checkout
-            </p>
+           
           </div>
         </div>
 
@@ -219,9 +268,7 @@ export const AdminSettingsTab: React.FC = () => {
             <h3 className="text-base font-bold font-satoshi-bold text-[#141414]">
               Social Media Channels
             </h3>
-            <p className="text-xs text-brand-body">
-              Footer links and customer engagement channels
-            </p>
+          
           </div>
         </div>
 

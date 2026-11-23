@@ -107,7 +107,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     },
     {
       id: 'banners',
-      label: 'Banners & Content',
+      label: 'Campaign Banners',
       icon: <ImageIcon size={18} />,
     },
     {

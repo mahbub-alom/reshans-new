@@ -42,7 +42,7 @@ export const AdminBannersTab: React.FC = () => {
   return (
     <div className="space-y-8 font-satoshi">
       {/* 1. Hero Campaign Banner Manager */}
-      <div className="bg-white border border-[#EBEBEB] rounded-xs shadow-2xs p-5 sm:p-6 space-y-5">
+      {/* <div className="bg-white border border-[#EBEBEB] rounded-xs shadow-2xs p-5 sm:p-6 space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#EBEBEB]">
           <div>
             <h3 className="text-base font-bold font-satoshi-bold text-[#141414] flex items-center gap-2">
@@ -179,17 +179,15 @@ export const AdminBannersTab: React.FC = () => {
             </div>
           ))}
         </div>
-      </div>
+      </div> */}
 
       {/* 2. Dual Promotional Banners */}
       <div className="bg-white border border-[#EBEBEB] rounded-xs shadow-2xs p-5 sm:p-6 space-y-5">
         <div className="pb-4 border-b border-[#EBEBEB]">
           <h3 className="text-base font-bold font-satoshi-bold text-[#141414]">
-            Dual Mid-Page Campaign Promos
+            Dual Campaign
           </h3>
-          <p className="text-xs text-brand-body">
-            Two side-by-side promotional split cards highlighted on the homepage
-          </p>
+      
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -285,12 +283,10 @@ export const AdminBannersTab: React.FC = () => {
         <div className="pb-3 border-b border-[#EBEBEB] flex items-center justify-between">
           <div>
             <h3 className="text-base font-bold font-satoshi-bold text-[#141414] flex items-center gap-2">
-              <Sparkles size={16} className="text-[#093624]" />
+             
               <span>Marquee Announcement Bar</span>
             </h3>
-            <p className="text-xs text-brand-body">
-              Infinite looping ticker text shown across public store pages
-            </p>
+         
           </div>
         </div>
 

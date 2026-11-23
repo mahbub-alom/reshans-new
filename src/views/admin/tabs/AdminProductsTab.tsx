@@ -454,8 +454,12 @@ export const AdminProductsTab: React.FC = () => {
                     type="number"
                     required
                     min={1}
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                    value={formData.price === 0 ? '' : formData.price}
+                    placeholder="e.g. 3500"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData({ ...formData, price: val === '' ? 0 : Number(val) });
+                    }}
                     className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs text-xs font-satoshi focus:outline-none focus:border-[#093624]"
                   />
                 </div>
@@ -467,8 +471,12 @@ export const AdminProductsTab: React.FC = () => {
                   <input
                     type="number"
                     min={1}
-                    value={formData.originalPrice}
-                    onChange={(e) => setFormData({ ...formData, originalPrice: Number(e.target.value) })}
+                    value={formData.originalPrice === 0 ? '' : formData.originalPrice}
+                    placeholder="e.g. 4200"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData({ ...formData, originalPrice: val === '' ? 0 : Number(val) });
+                    }}
                     className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs text-xs font-satoshi focus:outline-none focus:border-[#093624]"
                   />
                 </div>
@@ -556,14 +564,17 @@ export const AdminProductsTab: React.FC = () => {
                   <input
                     type="number"
                     min={0}
-                    value={formData.stockCount}
-                    onChange={(e) =>
+                    value={formData.stockCount === 0 ? '0' : formData.stockCount || ''}
+                    placeholder="e.g. 20"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const count = val === '' ? 0 : Number(val);
                       setFormData({
                         ...formData,
-                        stockCount: Number(e.target.value),
-                        inStock: Number(e.target.value) > 0,
-                      })
-                    }
+                        stockCount: count,
+                        inStock: count > 0,
+                      });
+                    }}
                     className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs text-xs font-satoshi focus:outline-none focus:border-[#093624]"
                   />
                 </div>
