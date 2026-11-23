@@ -15,9 +15,18 @@ export function middleware(request: NextRequest) {
     }
   }
 
+  // Protect URL browser navigation to protected dashboards:
+  // If user enters /admin or /dashboard directly in the URL without token, redirect immediately to /login
+  if (pathname.startsWith('/admin') || pathname.startsWith('/dashboard')) {
+    if (!token) {
+      const loginUrl = new URL('/login', request.url);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/api/admin/:path*'],
+  matcher: ['/api/admin/:path*', '/admin/:path*', '/admin', '/dashboard/:path*', '/dashboard'],
 };

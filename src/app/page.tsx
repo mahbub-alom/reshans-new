@@ -60,49 +60,22 @@ export default function HomePage() {
 
   // If in admin mode, enforce dynamic authorization:
   // Admin dashboard requires valid authentication token AND ADMIN role.
+  // Direct redirect to /login without showing access restriction screens or extra steps.
   if (currentPath.startsWith('/admin')) {
     if (authLoading) {
       return (
         <div className="min-h-screen bg-[#F9F9F9] flex flex-col items-center justify-center p-6 text-center font-satoshi">
           <div className="w-10 h-10 border-4 border-[#093624] border-t-transparent rounded-full animate-spin mb-4" />
-          <p className="text-sm font-semibold text-[#141414]">Verifying administrator credentials...</p>
+          <p className="text-sm font-semibold text-[#141414]">Verifying credentials...</p>
         </div>
       );
     }
 
     if (!isAuthenticated || !isAdmin) {
-      return (
-        <div className="min-h-screen bg-[#F9F9F9] flex flex-col items-center justify-center p-6 text-center font-satoshi">
-          <div className="bg-white p-8 max-w-md w-full rounded-xs shadow-md border border-gray-200 text-center space-y-4">
-            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto text-xl font-bold">
-              !
-            </div>
-            <h2 className="text-2xl font-bold font-satoshi-bold text-[#141414]">Access Restricted</h2>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              {isAuthenticated
-                ? 'Your account has Normal User privileges and is not authorized to access the Administrator Dashboard.'
-                : 'Administrator credentials required. Please sign in with an authorized Administrator account.'}
-            </p>
-            <div className="pt-2 flex flex-col gap-2">
-              <button
-                onClick={() => navigate('/login')}
-                className="w-full py-3 bg-[#093624] hover:bg-[#052216] text-[#F9F295] font-bold text-xs uppercase tracking-wider rounded-xs transition-colors cursor-pointer"
-              >
-                {isAuthenticated ? 'Sign In with Admin Account' : 'Sign In as Admin'}
-              </button>
-              {isAuthenticated && (
-                <button
-                  onClick={() => navigate('/dashboard')}
-                  className="w-full py-2.5 border border-gray-300 text-gray-700 hover:bg-gray-50 font-bold text-xs uppercase tracking-wider rounded-xs transition-colors cursor-pointer"
-                >
-                  Return to Customer Dashboard
-                </button>
-              )}
-            </div>
-          </div>
-          <Toast />
-        </div>
-      );
+      if (typeof window !== 'undefined') {
+        navigate('/login');
+      }
+      return null;
     }
 
     return (
@@ -116,7 +89,7 @@ export default function HomePage() {
 
   // Enforce customer dashboard authorization:
   // Strictly for customers/normal users.
-  // Admins have their dedicated management console and cannot access customer dashboard.
+  // Direct redirect to /login if unauthenticated or wrong credentials/role without restriction UI.
   if (currentPath.startsWith('/dashboard') || currentPath.startsWith('/dashboard-')) {
     if (authLoading) {
       return (
@@ -128,57 +101,18 @@ export default function HomePage() {
     }
 
     if (!isAuthenticated) {
-      return (
-        <div className="min-h-screen bg-[#F9F9F9] flex flex-col items-center justify-center p-6 text-center font-satoshi">
-          <div className="bg-white p-8 max-w-md w-full rounded-xs shadow-md border border-gray-200 text-center space-y-4">
-            <h2 className="text-2xl font-bold font-satoshi-bold text-[#141414]">Sign In Required</h2>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              Please sign in to your Reshans customer account to access your personal dashboard, track orders, and view invoices.
-            </p>
-            <div className="pt-2">
-              <button
-                onClick={() => navigate('/login')}
-                className="w-full py-3 bg-[#093624] hover:bg-[#052216] text-[#F9F295] font-bold text-xs uppercase tracking-wider rounded-xs transition-colors cursor-pointer"
-              >
-                Go to Sign In
-              </button>
-            </div>
-          </div>
-          <Toast />
-        </div>
-      );
+      if (typeof window !== 'undefined') {
+        navigate('/login');
+      }
+      return null;
     }
 
-    // Role boundary: Administrator accounts cannot access customer dashboard
+    // Role boundary: Administrator accounts cannot access customer dashboard -> direct redirect to admin dashboard
     if (isAdmin) {
-      return (
-        <div className="min-h-screen bg-[#F9F9F9] flex flex-col items-center justify-center p-6 text-center font-satoshi">
-          <div className="bg-white p-8 max-w-md w-full rounded-xs shadow-md border border-gray-200 text-center space-y-4">
-            <div className="w-12 h-12 rounded-full bg-amber-100 text-[#093624] flex items-center justify-center mx-auto text-xl font-bold">
-              !
-            </div>
-            <h2 className="text-2xl font-bold font-satoshi-bold text-[#141414]">Role Boundary Restricted</h2>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              You are signed in as an <strong>Administrator</strong>. Administrator accounts are restricted to the Admin Console and cannot access personal customer dashboards.
-            </p>
-            <div className="pt-2 flex flex-col gap-2">
-              <button
-                onClick={() => navigate('/admin')}
-                className="w-full py-3 bg-[#093624] hover:bg-[#052216] text-[#F9F295] font-bold text-xs uppercase tracking-wider rounded-xs transition-colors cursor-pointer"
-              >
-                Go to Admin Dashboard
-              </button>
-              <button
-                onClick={() => navigate('/')}
-                className="w-full py-2.5 border border-gray-300 text-gray-700 hover:bg-gray-50 font-bold text-xs uppercase tracking-wider rounded-xs transition-colors cursor-pointer"
-              >
-                Return to Storefront
-              </button>
-            </div>
-          </div>
-          <Toast />
-        </div>
-      );
+      if (typeof window !== 'undefined') {
+        navigate('/admin');
+      }
+      return null;
     }
   }
 
