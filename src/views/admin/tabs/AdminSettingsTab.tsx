@@ -31,38 +31,16 @@ export const AdminSettingsTab: React.FC = () => {
           <Building size={18} className="text-[#093624]" />
           <div>
             <h3 className="text-base font-bold font-satoshi-bold text-[#141414]">
-              Store Identity & Contact Details
+              Contact Details
             </h3>
-            <p className="text-xs text-brand-body">
-              Primary brand information presented to buyers across Bangladesh
-            </p>
+          
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block font-satoshi-bold uppercase tracking-wider text-brand-body mb-1">
-              Store Name
-            </label>
-            <input
-              type="text"
-              value={formData.storeName}
-              onChange={(e) => setFormData({ ...formData, storeName: e.target.value })}
-              className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs focus:outline-none focus:border-[#093624]"
-            />
-          </div>
+       
 
-          <div>
-            <label className="block font-satoshi-bold uppercase tracking-wider text-brand-body mb-1">
-              Brand Tagline
-            </label>
-            <input
-              type="text"
-              value={formData.tagline}
-              onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
-              className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs focus:outline-none focus:border-[#093624]"
-            />
-          </div>
+       
 
           <div>
             <label className="block font-satoshi-bold uppercase tracking-wider text-brand-body mb-1">
@@ -90,7 +68,7 @@ export const AdminSettingsTab: React.FC = () => {
 
           <div className="sm:col-span-2">
             <label className="block font-satoshi-bold uppercase tracking-wider text-brand-body mb-1">
-              Physical Atelier / Flagship Address
+              Physical Address
             </label>
             <input
               type="text"
