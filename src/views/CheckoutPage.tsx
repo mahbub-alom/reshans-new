@@ -48,7 +48,22 @@ export const CheckoutPage: React.FC = () => {
     orderNote,
     placeOrder,
     showToast,
+    currentUser,
+    isAuthenticated,
+    isAdmin,
   } = useShop();
+
+  // Requirement 3: Enforce Login / Signup before Checkout.
+  // If not logged in, redirect to login or signup with returnUrl to /checkout.
+  useEffect(() => {
+    if (!isAuthenticated) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('reshans_return_url', '/checkout');
+      }
+      showToast('Please sign in or create an account to proceed with checkout.');
+      navigate('/login');
+    }
+  }, [isAuthenticated]);
 
   const isBuyNow = checkoutMode === 'buy-now' && buyNowItem !== null;
   const activeItems = isBuyNow && buyNowItem ? [buyNowItem] : cart;
@@ -442,6 +457,22 @@ export const CheckoutPage: React.FC = () => {
     e.preventDefault();
     if (activeItems.length === 0) return;
 
+    // Requirement 2: Admin cannot place orders
+    if (isAdmin || currentUser?.role === 'ADMIN') {
+      showToast("Admin can't make Order", 'error');
+      return;
+    }
+
+    // Requirement 3: Account required
+    if (!isAuthenticated) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('reshans_return_url', '/checkout');
+      }
+      showToast('Please sign in or create an account to complete your order.');
+      navigate('/login');
+      return;
+    }
+
     if (!validateStep1()) {
       setCheckoutStep(1);
       showToast('Please verify your contact and address details.');
@@ -634,15 +665,32 @@ export const CheckoutPage: React.FC = () => {
           >
             {/* Left Column: Customer Info, Delivery Address, Payment Method (7 cols) */}
             <div className="lg:col-span-7 space-y-8">
+              {/* ADMIN RESTRICTION RED ALERT BANNER */}
+              {(isAdmin || currentUser?.role === 'ADMIN') && (
+                <div className="p-4.5 bg-red-50 border-2 border-red-500 rounded-xs flex items-start gap-3.5 text-xs text-red-900 shadow-sm animate-in fade-in duration-200">
+                  <div className="w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+                    <AlertCircle size={15} className="stroke-[2.5]" />
+                  </div>
+                  <div>
+                    <p className="font-bold font-satoshi-bold text-sm text-red-800">
+                      Admin can&apos;t make Order
+                    </p>
+                    <p className="text-red-700 text-xs mt-0.5 leading-relaxed">
+                      You are logged in with an Admini profile. Please switch to or register a customer account to make purchases.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Validation Error Alert Banner */}
               {Object.keys(errors).length > 0 && (
-                <div className="p-4 bg-[#F9F9F9] border border-[#141414] rounded-xs flex items-start gap-3 text-xs text-[#141414]">
-                  <AlertCircle size={18} className="text-[#093624] shrink-0 mt-0.5" />
+                <div className="p-4 bg-red-50 border-2 border-red-400 rounded-xs flex items-start gap-3 text-xs text-red-900">
+                  <AlertCircle size={18} className="text-red-600 shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-bold font-satoshi-bold">
+                    <p className="font-bold font-satoshi-bold text-red-800">
                       Please review the highlighted fields before placing your order.
                     </p>
-                    <p className="text-[#6D6868] mt-0.5">
+                    <p className="text-red-700 mt-0.5">
                       Ensure your contact information, delivery address, and payment details are accurate.
                     </p>
                   </div>

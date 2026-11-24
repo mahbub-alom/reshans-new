@@ -27,7 +27,11 @@ export const AuthModal: React.FC = () => {
         setTimeout(() => {
           setSuccessMsg('');
           closeAuth();
-          if (email.toLowerCase().includes('admin')) {
+          const returnUrl = typeof window !== 'undefined' ? localStorage.getItem('reshans_return_url') : null;
+          if (returnUrl) {
+            localStorage.removeItem('reshans_return_url');
+            navigate(returnUrl);
+          } else if (email.toLowerCase().includes('admin')) {
             navigate('/admin');
           } else {
             navigate('/dashboard');
@@ -44,7 +48,13 @@ export const AuthModal: React.FC = () => {
         setTimeout(() => {
           setSuccessMsg('');
           closeAuth();
-          navigate('/dashboard');
+          const returnUrl = typeof window !== 'undefined' ? localStorage.getItem('reshans_return_url') : null;
+          if (returnUrl) {
+            localStorage.removeItem('reshans_return_url');
+            navigate(returnUrl);
+          } else {
+            navigate('/dashboard');
+          }
         }, 800);
       } else {
         setErrorMsg(res.error || 'Registration failed.');

@@ -30,7 +30,11 @@ export const LoginPage: React.FC = () => {
       setIsSuccess(true);
       setTimeout(() => {
         setIsSuccess(false);
-        if (email.toLowerCase().includes('admin')) {
+        const returnUrl = typeof window !== 'undefined' ? localStorage.getItem('reshans_return_url') : null;
+        if (returnUrl) {
+          localStorage.removeItem('reshans_return_url');
+          navigate(returnUrl);
+        } else if (email.toLowerCase().includes('admin')) {
           navigate('/admin');
         } else {
           navigate('/dashboard');

@@ -249,6 +249,21 @@ export const OffcanvasMenu: React.FC = () => {
               </Link>
             </div>
 
+            {/* 7. Track Order */}
+            <div className="border-b border-gray-100 py-2.5">
+              <Link
+                href="/track-order"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate('/track-order');
+                  closeOffcanvas();
+                }}
+                className="block text-sm font-bold text-[#093624] hover:text-[#052216] transition-colors cursor-pointer"
+              >
+                Track Order
+              </Link>
+            </div>
+
             {/* Divider for account / tracking */}
             <div className="pt-2" />
 

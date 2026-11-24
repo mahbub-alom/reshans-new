@@ -40,6 +40,7 @@ const STATUS_STEPS: { key: OrderStatus; label: string; desc: string }[] = [
 export const TrackOrderPage: React.FC = () => {
   const {
     orders,
+    refreshOrders,
     trackedCodeQuery,
     setTrackedCodeQuery,
     findOrderByTrackingCode,
@@ -50,20 +51,46 @@ export const TrackOrderPage: React.FC = () => {
   const [inputCode, setInputCode] = useState(trackedCodeQuery || '');
   const [searchedOrder, setSearchedOrder] = useState<Order | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [isSearchingDb, setIsSearchingDb] = useState(false);
 
-  // Auto-load when arriving from Order Confirmation with trackedCodeQuery
-  useEffect(() => {
-    if (trackedCodeQuery) {
-      setInputCode(trackedCodeQuery);
-      const match = findOrderByTrackingCode(trackedCodeQuery);
-      if (match) {
-        setSearchedOrder(match);
-        setHasSearched(true);
+  // Direct live database fetch for tracking code
+  const fetchOrderFromDb = async (code: string) => {
+    const trimmed = code.trim();
+    if (!trimmed) return null;
+
+    setIsSearchingDb(true);
+    try {
+      const res = await fetch(`/api/orders/${encodeURIComponent(trimmed)}`);
+      const data = await res.json();
+      if (data.success && data.order) {
+        return data.order as Order;
       }
+    } catch (err) {
+      console.warn('Direct track order query failed:', err);
+    } finally {
+      setIsSearchingDb(false);
     }
-  }, [trackedCodeQuery, orders]);
 
-  const handleSearch = (e: React.FormEvent) => {
+    // Fallback to local context match
+    return findOrderByTrackingCode(trimmed) || null;
+  };
+
+  // Auto-load and sync with DB on mount / when arriving from Order Confirmation
+  useEffect(() => {
+    refreshOrders();
+    const query = trackedCodeQuery || inputCode;
+    if (query) {
+      setInputCode(query);
+      fetchOrderFromDb(query).then((matched) => {
+        if (matched) {
+          setSearchedOrder(matched);
+          setHasSearched(true);
+        }
+      });
+    }
+  }, [trackedCodeQuery]);
+
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = inputCode.trim();
     if (!trimmed) {
@@ -72,16 +99,16 @@ export const TrackOrderPage: React.FC = () => {
       return;
     }
     setTrackedCodeQuery(trimmed);
-    const match = findOrderByTrackingCode(trimmed);
-    setSearchedOrder(match || null);
+    const matched = await fetchOrderFromDb(trimmed);
+    setSearchedOrder(matched);
     setHasSearched(true);
   };
 
-  const handleQuickSelect = (code: string) => {
+  const handleQuickSelect = async (code: string) => {
     setInputCode(code);
     setTrackedCodeQuery(code);
-    const match = findOrderByTrackingCode(code);
-    setSearchedOrder(match || null);
+    const matched = await fetchOrderFromDb(code);
+    setSearchedOrder(matched);
     setHasSearched(true);
   };
 
@@ -143,9 +170,10 @@ export const TrackOrderPage: React.FC = () => {
             </div>
             <button
               type="submit"
-              className="h-12 px-7 bg-[#093624] hover:bg-[#052216] text-[#F9F295] hover:text-white text-xs font-bold uppercase tracking-wider rounded-xs transition-colors cursor-pointer font-satoshi-bold shrink-0"
+              disabled={isSearchingDb}
+              className="h-12 px-7 bg-[#093624] hover:bg-[#052216] disabled:opacity-70 text-[#F9F295] hover:text-white text-xs font-bold uppercase tracking-wider rounded-xs transition-colors cursor-pointer font-satoshi-bold shrink-0 flex items-center justify-center gap-2"
             >
-              Track Order
+              <span>{isSearchingDb ? 'Checking DB...' : 'Track Order'}</span>
             </button>
           </form>
 

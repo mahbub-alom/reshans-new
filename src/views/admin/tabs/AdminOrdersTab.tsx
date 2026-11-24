@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Package,
   Search,
@@ -17,13 +17,17 @@ import {
   Mail,
   X,
   CreditCard,
+  RefreshCw,
+  Download,
 } from 'lucide-react';
 import { Order, OrderStatus } from '../../../types';
 import { useShop } from '../../../context/ShopContext';
+import { downloadOrderInvoice } from '../../../lib/invoiceGenerator';
 
 export const AdminOrdersTab: React.FC = () => {
   const {
     orders,
+    refreshOrders,
     updateOrderStatus,
     cancelOrder,
     refundOrder,
@@ -34,6 +38,18 @@ export const AdminOrdersTab: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'All' | OrderStatus>('All');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [trackingInput, setTrackingInput] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Sync with DB whenever tab loads
+  useEffect(() => {
+    refreshOrders();
+  }, []);
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    await refreshOrders();
+    setIsRefreshing(false);
+  };
 
   const filteredOrders = orders.filter((o) => {
     const matchesSearch =
@@ -104,8 +120,17 @@ export const AdminOrdersTab: React.FC = () => {
             />
           </div>
 
-          <div className="text-xs text-gray-500 font-satoshi">
-            Showing <span className="font-satoshi-bold text-[#141414]">{filteredOrders.length}</span> orders
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleManualRefresh}
+              className="px-3 py-1.5 bg-gray-100 hover:bg-[#093624] hover:text-[#F9F295] text-gray-700 text-xs font-bold rounded-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <RefreshCw size={12} className={isRefreshing ? 'animate-spin' : ''} />
+              <span>Refresh Orders</span>
+            </button>
+            <div className="text-xs text-gray-500 font-satoshi">
+              Showing <span className="font-satoshi-bold text-[#141414]">{filteredOrders.length}</span> orders
+            </div>
           </div>
         </div>
       </div>
@@ -210,13 +235,24 @@ export const AdminOrdersTab: React.FC = () => {
 
                   {/* Action */}
                   <td className="py-3.5 px-4 text-center">
-                    <button
-                      onClick={() => handleOpenDetails(ord)}
-                      className="px-2.5 py-1 bg-[#093624]/10 hover:bg-[#093624] text-[#093624] hover:text-[#F9F295] rounded-xs font-satoshi-bold text-[11px] transition-colors cursor-pointer inline-flex items-center gap-1"
-                    >
-                      <Eye size={12} />
-                      <span>Details</span>
-                    </button>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <button
+                        onClick={() => handleOpenDetails(ord)}
+                        className="px-2.5 py-1 bg-[#093624]/10 hover:bg-[#093624] text-[#093624] hover:text-[#F9F295] rounded-xs font-satoshi-bold text-[11px] transition-colors cursor-pointer inline-flex items-center gap-1"
+                        title="View Order Details"
+                      >
+                        <Eye size={12} />
+                        <span>Details</span>
+                      </button>
+
+                      <button
+                        onClick={() => downloadOrderInvoice(ord, formatPrice)}
+                        className="p-1 text-gray-600 hover:text-[#093624] hover:bg-gray-100 rounded-xs border border-gray-200 transition-colors cursor-pointer"
+                        title="Download / Print Invoice"
+                      >
+                        <Download size={13} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -405,7 +441,16 @@ export const AdminOrdersTab: React.FC = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 bg-gray-50 border-t border-[#EBEBEB] flex justify-end">
+            <div className="p-4 bg-gray-50 border-t border-[#EBEBEB] flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => downloadOrderInvoice(selectedOrder, formatPrice)}
+                className="px-4 py-2 bg-[#093624] hover:bg-[#052216] text-[#F9F295] text-xs font-satoshi-bold uppercase tracking-wider rounded-xs transition-colors cursor-pointer inline-flex items-center gap-1.5"
+              >
+                <Download size={14} />
+                <span>Download Invoice</span>
+              </button>
+
               <button
                 onClick={() => setSelectedOrder(null)}
                 className="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-satoshi-bold uppercase tracking-wider rounded-xs transition-colors cursor-pointer"

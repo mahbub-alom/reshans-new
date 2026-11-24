@@ -43,7 +43,13 @@ export const RegisterPage: React.FC = () => {
       setIsSuccess(true);
       setTimeout(() => {
         setIsSuccess(false);
-        navigate('/dashboard');
+        const returnUrl = typeof window !== 'undefined' ? localStorage.getItem('reshans_return_url') : null;
+        if (returnUrl) {
+          localStorage.removeItem('reshans_return_url');
+          navigate(returnUrl);
+        } else {
+          navigate('/dashboard');
+        }
       }, 1000);
     } else {
       setError(result.error || 'Registration failed.');

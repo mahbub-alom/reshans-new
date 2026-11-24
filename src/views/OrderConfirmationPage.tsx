@@ -7,10 +7,12 @@ import {
   Truck,
   ArrowRight,
   Printer,
+  Download,
   MapPin,
   CreditCard,
   ShoppingBag,
 } from 'lucide-react';
+import { downloadOrderInvoice } from '../lib/invoiceGenerator';
 
 export const OrderConfirmationPage: React.FC = () => {
   const {
@@ -146,6 +148,15 @@ export const OrderConfirmationPage: React.FC = () => {
               className="inline-flex items-center gap-2 border border-gray-300 hover:border-[#093624] bg-white text-[#141414] hover:text-[#093624] text-xs font-bold uppercase tracking-wider px-7 py-3.5 rounded-xs transition-colors cursor-pointer font-satoshi-bold"
             >
               <span>Continue Shopping</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => downloadOrderInvoice(order, formatPrice)}
+              className="inline-flex items-center gap-2 bg-[#093624] hover:bg-[#052216] text-[#F9F295] text-xs font-bold uppercase tracking-wider px-5 py-3.5 rounded-xs transition-colors cursor-pointer font-satoshi-bold shadow-xs"
+            >
+              <Download size={15} />
+              <span>Download Invoice</span>
             </button>
 
             <button

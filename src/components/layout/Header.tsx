@@ -245,6 +245,22 @@ export const Header: React.FC = () => {
                 HOT
               </span>
             </Link>
+
+            {/* 7. Track Order */}
+            <Link
+              href="/track-order"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate('/track-order');
+              }}
+              className={`text-[15px] transition-colors cursor-pointer py-1 flex items-center gap-1.5 ${
+                currentPath === '/track-order'
+                  ? 'text-[#093624] font-black'
+                  : 'text-[#141414] hover:text-[#093624]'
+              }`}
+            >
+              <span>Track Order</span>
+            </Link>
           </nav>
 
           {/* Right Action Icons:

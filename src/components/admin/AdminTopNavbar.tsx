@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Menu,
   Search,
@@ -11,6 +11,8 @@ import {
   AlertTriangle,
   CheckCircle,
   LogOut,
+  X,
+  Volume2,
 } from 'lucide-react';
 import { AdminTab } from './AdminSidebar';
 import { useShop } from '../../context/ShopContext';
@@ -20,6 +22,16 @@ interface AdminTopNavbarProps {
   onOpenMobileSidebar: () => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+}
+
+interface RealtimeOrderAlert {
+  orderId: string;
+  orderNumber: string;
+  customerName: string;
+  customerEmail: string;
+  total: number;
+  paymentMethod: string;
+  timestamp: number;
 }
 
 const TAB_TITLES: Record<AdminTab, { title: string; subtitle: string }> = {
@@ -79,11 +91,64 @@ export const AdminTopNavbar: React.FC<AdminTopNavbarProps> = ({
   searchQuery,
   setSearchQuery,
 }) => {
-  const { navigate, orders, products, adminProfile, currentUser, logoutUser } = useShop();
+  const { navigate, orders, products, adminProfile, currentUser, logoutUser, formatPrice, showToast, refreshOrders } = useShop();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [liveOrderToast, setLiveOrderToast] = useState<RealtimeOrderAlert | null>(null);
 
-  const pendingOrders = orders.filter((o) => o.orderStatus === 'Pending' || o.orderStatus === 'Processing');
+  // Real-time 0-second Server-Sent Events (SSE) listener for instant new orders
+  useEffect(() => {
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource('/api/orders/stream');
+
+      eventSource.addEventListener('new_order', (e: MessageEvent) => {
+        try {
+          const newOrderData = JSON.parse(e.data);
+          // Play audio notification chime
+          try {
+            const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+            osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.1); // A5
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.4);
+          } catch {}
+
+          // Instantly refresh orders in React ShopContext and DB state!
+          refreshOrders();
+
+          // Show floating instant alert & toast
+          setLiveOrderToast(newOrderData);
+          showToast(`🔔 New Order Received: ${newOrderData.orderNumber} by ${newOrderData.customerName}!`);
+        } catch (parseErr) {
+          console.warn('Failed to parse SSE order event:', parseErr);
+        }
+      });
+
+      eventSource.onerror = (err) => {
+        console.warn('SSE order stream reconnecting...', err);
+      };
+    } catch (err) {
+      console.warn('SSE connection failed:', err);
+    }
+
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+    };
+  }, []);
+
+  const pendingOrders = orders.filter((o) => {
+    const status = (o.orderStatus || '').toLowerCase();
+    return status === 'pending' || status === 'processing';
+  });
   const lowStockProducts = products.filter((p) => !p.inStock || (p.stockCount !== undefined && p.stockCount <= 5));
   const totalNotifications = pendingOrders.length + lowStockProducts.length;
 
@@ -176,18 +241,53 @@ export const AdminTopNavbar: React.FC<AdminTopNavbarProps> = ({
                   </span>
                 </div>
 
-                <div className="max-h-72 overflow-y-auto divide-y divide-gray-50">
+                <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
+                  {/* Real-time incoming unread order banner inside notification dropdown */}
+                  {liveOrderToast && (
+                    <div
+                      onClick={() => {
+                        setIsNotificationsOpen(false);
+                        navigate('/admin/orders');
+                      }}
+                      className="p-3 bg-[#F9F295]/20 hover:bg-[#F9F295]/30 transition-colors flex items-start gap-2.5 text-left cursor-pointer border-b border-[#F9F295]/40"
+                    >
+                      <div className="w-7 h-7 bg-[#093624] text-[#F9F295] rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                        <ShoppingBag size={14} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[9px] font-bold uppercase bg-[#093624] text-[#F9F295] px-1 py-0.2 rounded font-satoshi-bold">
+                            Live 0s
+                          </span>
+                          <p className="text-xs font-satoshi-bold text-[#141414]">
+                            New Order #{liveOrderToast.orderNumber}
+                          </p>
+                        </div>
+                        <p className="text-[11px] text-gray-700 font-satoshi truncate mt-0.5">
+                          {liveOrderToast.customerName} • ৳ {liveOrderToast.total.toLocaleString()} ({liveOrderToast.paymentMethod})
+                        </p>
+                        <span className="text-[10px] text-emerald-700 font-satoshi-bold">
+                          Just placed • Click to open
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   {pendingOrders.map((ord) => (
                     <div
                       key={ord.id}
-                      className="p-3 hover:bg-gray-50 transition-colors flex items-start gap-2.5 text-left"
+                      onClick={() => {
+                        setIsNotificationsOpen(false);
+                        navigate('/admin/orders');
+                      }}
+                      className="p-3 hover:bg-gray-50 transition-colors flex items-start gap-2.5 text-left cursor-pointer"
                     >
                       <div className="w-7 h-7 bg-[#F9F295]/60 rounded-full flex items-center justify-center text-[#093624] shrink-0 mt-0.5">
                         <ShoppingBag size={14} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-satoshi-bold text-[#141414]">
-                          New Order {ord.id}
+                          Order {ord.id}
                         </p>
                         <p className="text-[11px] text-gray-500 font-satoshi truncate">
                           {ord.customerName} • ৳ {ord.total.toLocaleString()} ({ord.paymentMethod})
@@ -285,6 +385,58 @@ export const AdminTopNavbar: React.FC<AdminTopNavbarProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Floating 0-second Real-time Order Popup Banner */}
+      {liveOrderToast && (
+        <div className="fixed top-16 right-4 sm:right-6 z-50 max-w-sm w-full bg-[#093624] text-white p-4 rounded-xs shadow-2xl border-2 border-[#F9F295] animate-in slide-in-from-top-3 duration-300">
+          <div className="flex items-start justify-between gap-3">
+            <div className="w-9 h-9 rounded-full bg-[#F9F295] text-[#093624] flex items-center justify-center shrink-0 font-bold shadow-xs">
+              <ShoppingBag size={18} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase bg-[#F9F295] text-[#093624] px-1.5 py-0.2 rounded font-satoshi-bold">
+                  Just Now (0s)
+                </span>
+                <span className="text-xs font-bold text-white/90">New Order Placed!</span>
+              </div>
+              <div className="text-sm font-bold text-[#F9F295] mt-0.5 truncate">
+                {liveOrderToast.orderNumber}
+              </div>
+              <div className="text-xs text-white/80 mt-0.5">
+                {liveOrderToast.customerName} • ৳ {liveOrderToast.total.toLocaleString()}
+              </div>
+              <div className="text-[10px] text-white/60">
+                Payment: {liveOrderToast.paymentMethod}
+              </div>
+            </div>
+            <button
+              onClick={() => setLiveOrderToast(null)}
+              className="text-white/70 hover:text-white p-1 hover:bg-white/10 rounded-xs cursor-pointer"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <div className="mt-3 pt-2.5 border-t border-white/15 flex items-center justify-between">
+            <button
+              onClick={() => {
+                setLiveOrderToast(null);
+                navigate('/admin/orders');
+              }}
+              className="text-xs font-bold text-[#F9F295] hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <span>View in Orders Tab</span>
+              <ExternalLink size={12} />
+            </button>
+            <button
+              onClick={() => setLiveOrderToast(null)}
+              className="text-[11px] text-white/70 hover:text-white cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

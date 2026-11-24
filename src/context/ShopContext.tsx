@@ -75,8 +75,9 @@ interface ShopContextType {
   cartCount: number;
   wishlistCount: number;
   toastMessage: string | null;
+  toastType: 'success' | 'error';
   clearToast: () => void;
-  showToast: (msg: string) => void;
+  showToast: (msg: string, type?: 'success' | 'error') => void;
   formatPrice: (amount: number) => string;
   currentPath: string;
   navigate: (path: string) => void;
@@ -124,6 +125,7 @@ interface ShopContextType {
 
   // Admin Management State & Handlers
   orders: Order[];
+  refreshOrders: () => Promise<void>;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   cancelOrder: (orderId: string) => void;
   refundOrder: (orderId: string) => void;
@@ -231,7 +233,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const fetchStoreSettingsCouponsAndBanners = async () => {
       try {
-        const [settingsRes, couponsRes, bannersRes, productsRes, categoriesRes, brandsRes, reviewsRes] = await Promise.all([
+        const [settingsRes, couponsRes, bannersRes, productsRes, categoriesRes, brandsRes, reviewsRes, ordersRes] = await Promise.all([
           fetch('/api/settings'),
           fetch('/api/coupons'),
           fetch('/api/banners'),
@@ -239,6 +241,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
           fetch('/api/categories'),
           fetch('/api/brands'),
           fetch('/api/reviews'),
+          fetch('/api/orders'),
         ]);
 
         const settingsData = await settingsRes.json();
@@ -269,6 +272,14 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const reviewsData = await reviewsRes.json();
         if (reviewsData.success && Array.isArray(reviewsData.reviews) && reviewsData.reviews.length > 0) {
           setReviews(reviewsData.reviews);
+        }
+
+        const ordersData = await ordersRes.json();
+        if (ordersData.success && Array.isArray(ordersData.orders) && ordersData.orders.length > 0) {
+          setOrders(ordersData.orders);
+          try {
+            localStorage.setItem('reshans_orders_v1', JSON.stringify(ordersData.orders));
+          } catch {}
         }
 
         const productsData = await productsRes.json();
@@ -492,6 +503,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isOffcanvasOpen, setIsOffcanvasOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
   // Routing state based on real browser pathname (HTML5 History API)
   const getInitialPath = () => {
@@ -537,11 +549,17 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearToast = () => setToastMessage(null);
 
-  const showToast = (msg: string) => {
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    // If msg indicates error/failed/cannot/restriction/warning, automatically treat as error
+    const isError =
+      type === 'error' ||
+      /cannot|can't|error|fail|invalid|restricted|violation|blocked|wrong|not allowed|warning|required/i.test(msg);
+
+    setToastType(isError ? 'error' : 'success');
     setToastMessage(msg);
     setTimeout(() => {
       setToastMessage((curr) => (curr === msg ? null : curr));
-    }, 3500);
+    }, 4000);
   };
 
   // 1/ Prevent background scrolling whenever ANY modal/drawer is open
@@ -777,9 +795,32 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       note: payload.note,
     };
 
+    const isCurrentUserAdmin = currentUser?.role === 'ADMIN' || adminProfile?.role === 'ADMIN';
+    if (isCurrentUserAdmin) {
+      showToast("Admin can't make Order", 'error');
+      return null as any;
+    }
+
     setOrders((prev) => [newOrder, ...prev]);
     setLastConfirmedOrder(newOrder);
     setTrackedCodeQuery(trackingCode);
+
+    // Save order in backend API with identical orderId & trackingNumber
+    fetch('/api/orders', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      },
+      body: JSON.stringify({
+        ...payload,
+        orderId: newOrder.id,
+        trackingNumber: trackingCode,
+        userId: currentUser?.id,
+        role: currentUser?.role,
+        isAdmin: isCurrentUserAdmin,
+      }),
+    }).catch((err) => console.warn('Could not post order to backend:', err));
 
     // If a coupon was applied, increment its usage count and deactivate if usage limit reached
     if (payload.couponCode) {
@@ -1022,25 +1063,85 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Admin Order Actions
-  const updateOrderStatus = (orderId: string, status: OrderStatus) => {
-    setOrders((prev) =>
-      prev.map((ord) => (ord.id === orderId ? { ...ord, orderStatus: status } : ord))
-    );
-    showToast(`Order ${orderId} status changed to ${status}.`);
+  const refreshOrders = async () => {
+    try {
+      const res = await fetch('/api/orders');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.orders)) {
+        setOrders(data.orders);
+        try {
+          localStorage.setItem('reshans_orders_v1', JSON.stringify(data.orders));
+        } catch {}
+      }
+    } catch (err) {
+      console.warn('Could not refresh orders from API:', err);
+    }
   };
 
-  const cancelOrder = (orderId: string) => {
+  const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
+    // 1. Optimistic React & LocalStorage update
+    setOrders((prev) => {
+      const updated = prev.map((ord) => (ord.id === orderId ? { ...ord, orderStatus: status } : ord));
+      try {
+        localStorage.setItem('reshans_orders_v1', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+    showToast(`Order ${orderId} status changed to ${status}.`);
+
+    // 2. Persist in MySQL Database via API
+    try {
+      await fetch(`/api/orders/${encodeURIComponent(orderId)}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+        body: JSON.stringify({ orderStatus: status }),
+      });
+    } catch (err) {
+      console.warn('Failed to update order status in DB:', err);
+    }
+  };
+
+  const cancelOrder = async (orderId: string) => {
     setOrders((prev) =>
       prev.map((ord) => (ord.id === orderId ? { ...ord, orderStatus: 'Cancelled' } : ord))
     );
     showToast(`Order ${orderId} has been cancelled.`);
+
+    try {
+      await fetch(`/api/orders/${encodeURIComponent(orderId)}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+        body: JSON.stringify({ orderStatus: 'Cancelled' }),
+      });
+    } catch (err) {
+      console.warn('Failed to cancel order in DB:', err);
+    }
   };
 
-  const refundOrder = (orderId: string) => {
+  const refundOrder = async (orderId: string) => {
     setOrders((prev) =>
       prev.map((ord) => (ord.id === orderId ? { ...ord, paymentStatus: 'Refunded' } : ord))
     );
     showToast(`Refund recorded for order ${orderId}.`);
+
+    try {
+      await fetch(`/api/orders/${encodeURIComponent(orderId)}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+        body: JSON.stringify({ paymentStatus: 'Refunded' }),
+      });
+    } catch (err) {
+      console.warn('Failed to refund order in DB:', err);
+    }
   };
 
   // Admin Customer Actions
@@ -1370,6 +1471,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         cartCount,
         wishlistCount,
         toastMessage,
+        toastType,
         clearToast,
         showToast,
         formatPrice,
@@ -1396,6 +1498,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         findOrderByTrackingCode,
         // Admin State & Handlers
         orders,
+        refreshOrders,
         updateOrderStatus,
         cancelOrder,
         refundOrder,
