@@ -5,11 +5,16 @@ import { Button } from '../../components/common/Button';
 import { Eye, MapPin, PackageCheck } from 'lucide-react';
 
 export const DashboardOrderPage: React.FC = () => {
-  const { navigate, formatPrice, orders, cancelOrder, setTrackedCodeQuery } = useShop();
+  const { navigate, formatPrice, orders, cancelOrder, setTrackedCodeQuery, setSelectedOrderId } = useShop();
 
   const handleTrack = (trackingCode: string) => {
     setTrackedCodeQuery(trackingCode);
     navigate('/track-order');
+  };
+
+  const handleViewDetails = (orderId: string) => {
+    setSelectedOrderId(orderId);
+    navigate('/dashboard/order-details');
   };
 
   return (
@@ -25,11 +30,20 @@ export const DashboardOrderPage: React.FC = () => {
         </div>
 
         {/* Orders Card Stack */}
-        <div className="space-y-5">
+        {orders.length === 0 ? (
+          <div className="bg-white border border-[#EBEBEB] p-12 text-center shadow-2xs">
+            <p className="text-brand-body text-sm font-satoshi mb-4">You have no orders yet.</p>
+            <Button variant="primary" size="sm" onClick={() => navigate('/shop')}>
+              Start Shopping
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-5">
           {orders.map((order) => {
             const itemsCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
             const isDone = order.orderStatus === 'Delivered';
             const isCancelled = order.orderStatus === 'Cancelled';
+            const isPending = order.orderStatus === 'Pending';
 
             return (
               <div
@@ -109,10 +123,10 @@ export const DashboardOrderPage: React.FC = () => {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3">
-                    {!isDone && !isCancelled && (
+                    {isPending && (
                       <button
                         onClick={() => cancelOrder(order.id)}
-                        className="px-4 py-2 border border-[#E8E5E3] text-[#141414] hover:border-[#141414] hover:bg-[#F1EFEE] text-xs font-bold uppercase tracking-wider font-satoshi-bold transition-colors cursor-pointer"
+                        className="px-4 py-2 border border-red-200 text-red-600 hover:border-red-600 hover:bg-red-50 text-xs font-bold uppercase tracking-wider font-satoshi-bold transition-colors cursor-pointer"
                       >
                         Cancel Order
                       </button>
@@ -132,7 +146,7 @@ export const DashboardOrderPage: React.FC = () => {
                       variant="black"
                       size="sm"
                       icon={<Eye size={14} />}
-                      onClick={() => navigate('/dashboard/order-details')}
+                      onClick={() => handleViewDetails(order.id)}
                     >
                       View Details
                     </Button>
@@ -142,6 +156,7 @@ export const DashboardOrderPage: React.FC = () => {
             );
           })}
         </div>
+        )}
       </div>
     </DashboardLayout>
   );

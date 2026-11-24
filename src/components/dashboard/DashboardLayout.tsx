@@ -45,8 +45,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
         {/* 2-Column Responsive Dashboard Grid: Sidebar (3 cols) + Content (9 cols) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Left Sidebar */}
-          <div className="lg:col-span-3">
+          {/* Left Sidebar - Sticky on scroll */}
+          <div className="lg:col-span-3 lg:sticky lg:top-24 z-10">
             <DashboardSidebar activeTab={activeTab} />
           </div>
 

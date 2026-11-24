@@ -7,7 +7,7 @@ import { Button } from '../../components/common/Button';
 import { Package, MapPin, User, ShoppingBag, ArrowRight } from 'lucide-react';
 
 export const DashboardOverviewPage: React.FC = () => {
-  const { navigate, currentUser } = useShop();
+  const { navigate, currentUser, orders } = useShop();
 
   return (
     <DashboardLayout activeTab="dashboard">
@@ -44,7 +44,7 @@ export const DashboardOverviewPage: React.FC = () => {
           {/* Card 1: View Orders */}
           <div className="bg-white border border-[#EBEBEB] p-6 relative flex flex-col justify-between shadow-2xs group hover:border-primary transition-colors">
             <span className="absolute top-5 right-5 w-7 h-7 bg-primary text-secondary text-xs font-bold rounded-full flex items-center justify-center font-satoshi-bold">
-              6
+              {orders.length}
             </span>
             <div className="mb-6">
               <div className="w-12 h-12 bg-[#F9F9F9] rounded-none flex items-center justify-center text-primary mb-4">
@@ -84,7 +84,7 @@ export const DashboardOverviewPage: React.FC = () => {
               variant="outline"
               size="sm"
               icon={<ArrowRight size={14} />}
-              onClick={() => navigate('/dashboard/orders')}
+              onClick={() => navigate('/dashboard/address')}
             >
               Manage Address
             </Button>
@@ -107,7 +107,7 @@ export const DashboardOverviewPage: React.FC = () => {
               variant="outline"
               size="sm"
               icon={<ArrowRight size={14} />}
-              onClick={() => navigate('/dashboard/orders')}
+              onClick={() => navigate('/dashboard/profile')}
             >
               Edit Profile
             </Button>

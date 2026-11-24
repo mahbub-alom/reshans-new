@@ -40,7 +40,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab })
   const { navigate, openWishlist, wishlistCount, currentUser, logoutUser } = useShop();
 
   const NAV_ITEMS: {
-    id: DashboardTab | 'downloads' | 'offers' | 'logout';
+    id: DashboardTab | 'offers' | 'logout';
     label: string;
     icon: React.ReactNode;
     route?: string;
@@ -57,12 +57,6 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab })
       label: 'Orders',
       icon: <Package size={18} />,
       route: '/dashboard/orders',
-    },
-    {
-      id: 'downloads',
-      label: 'Downloads',
-      icon: <Download size={18} />,
-      onClick: () => navigate('/dashboard/orders'),
     },
     {
       id: 'invoices',

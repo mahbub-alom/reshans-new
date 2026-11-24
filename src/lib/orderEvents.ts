@@ -10,6 +10,7 @@ export interface OrderNotificationPayload {
   total: number;
   paymentMethod: string;
   orderStatus: string;
+  paymentStatus?: string;
   date: string;
   timestamp: number;
 }

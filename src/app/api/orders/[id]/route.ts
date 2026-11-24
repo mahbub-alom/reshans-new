@@ -158,6 +158,7 @@ export async function PUT(
             customerPhone: updated.customerPhone,
             total: updated.total,
             paymentMethod: updated.paymentMethod,
+            paymentStatus: updated.paymentStatus === 'PAID' ? 'Paid' : updated.paymentStatus === 'REFUNDED' ? 'Refunded' : 'Pending',
             orderStatus: mapOrderStatusFromPrisma(updated.orderStatus),
             trackingNumber: updated.trackingNumber,
             date: updated.createdAt ? new Date(updated.createdAt).toISOString().replace('T', ' ').substring(0, 16) : '',
@@ -179,7 +180,21 @@ export async function PUT(
         total: updatedOrder.total,
         paymentMethod: updatedOrder.paymentMethod,
         orderStatus: updatedOrder.orderStatus,
+        paymentStatus: updatedOrder.paymentStatus,
         date: updatedOrder.date,
+        timestamp: Date.now(),
+      });
+    } else {
+      orderEvents.notifyOrder({
+        orderId: decodedId,
+        orderNumber: decodedId,
+        customerName: '',
+        customerEmail: '',
+        total: 0,
+        paymentMethod: '',
+        orderStatus: orderStatus || '',
+        paymentStatus: paymentStatus || '',
+        date: '',
         timestamp: Date.now(),
       });
     }

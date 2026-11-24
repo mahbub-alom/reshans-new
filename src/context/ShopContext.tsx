@@ -123,6 +123,11 @@ interface ShopContextType {
   }) => Order;
   findOrderByTrackingCode: (query: string) => Order | undefined;
 
+  // Selected Order for Dashboard Order Details & Invoice Details
+  selectedOrderId: string | null;
+  setSelectedOrderId: (orderId: string | null) => void;
+  selectedOrder: Order | null;
+
   // Admin Management State & Handlers
   orders: Order[];
   refreshOrders: () => Promise<void>;
@@ -459,6 +464,29 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [orderNote, setOrderNote] = useState<string>('');
   const [lastConfirmedOrder, setLastConfirmedOrder] = useState<Order | null>(null);
   const [trackedCodeQuery, setTrackedCodeQuery] = useState<string>('');
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return localStorage.getItem('reshans_selected_order_id') || null;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
+
+  const handleSetSelectedOrderId = (orderId: string | null) => {
+    setSelectedOrderId(orderId);
+    if (typeof window !== 'undefined') {
+      try {
+        if (orderId) {
+          localStorage.setItem('reshans_selected_order_id', orderId);
+        } else {
+          localStorage.removeItem('reshans_selected_order_id');
+        }
+      } catch {}
+    }
+  };
 
   useEffect(() => {
     try {
@@ -1062,7 +1090,52 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Admin Order Actions
+  // Real-time Orders Synchronization via SSE
+  useEffect(() => {
+    let eventSource: EventSource | null = null;
+    let retryTimeout: any = null;
+
+    const connectSSE = () => {
+      try {
+        eventSource = new EventSource('/api/orders/stream');
+
+        eventSource.addEventListener('new_order', (e) => {
+          try {
+            const data = JSON.parse(e.data);
+            if (data && (data.orderId || data.orderNumber)) {
+              // Refresh orders from API or update status locally
+              refreshOrders();
+            }
+          } catch (err) {
+            console.warn('SSE message parse error:', err);
+          }
+        });
+
+        eventSource.onerror = () => {
+          if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+          }
+          // Reconnect with backoff
+          retryTimeout = setTimeout(connectSSE, 5000);
+        };
+      } catch (err) {
+        console.warn('SSE connection error:', err);
+      }
+    };
+
+    connectSSE();
+
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+      }
+    };
+  }, []);
+
   const refreshOrders = async () => {
     try {
       const res = await fetch('/api/orders');
@@ -1496,6 +1569,9 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setTrackedCodeQuery,
         placeOrder,
         findOrderByTrackingCode,
+        selectedOrderId,
+        setSelectedOrderId: handleSetSelectedOrderId,
+        selectedOrder: orders.find((o) => o.id === selectedOrderId || (o.trackingNumber && o.trackingNumber === selectedOrderId)) || (orders.length > 0 ? orders[0] : null),
         // Admin State & Handlers
         orders,
         refreshOrders,

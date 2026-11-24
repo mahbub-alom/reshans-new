@@ -3,11 +3,28 @@ import prisma from '@/lib/prisma';
 import { INITIAL_ORDERS } from '@/data/adminInitialData';
 import { orderEvents } from '@/lib/orderEvents';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const emailParam = searchParams.get('email')?.trim().toLowerCase();
+    const userIdParam = searchParams.get('userId')?.trim();
+
     if (process.env.DATABASE_URL) {
       try {
+        const whereClause: any = {};
+        if (emailParam && userIdParam) {
+          whereClause.OR = [
+            { customerEmail: emailParam },
+            { userId: userIdParam },
+          ];
+        } else if (emailParam) {
+          whereClause.customerEmail = emailParam;
+        } else if (userIdParam) {
+          whereClause.userId = userIdParam;
+        }
+
         const dbOrders = await prisma.order.findMany({
+          where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
           include: { items: true },
           orderBy: { createdAt: 'desc' },
         });
@@ -66,7 +83,14 @@ export async function GET() {
       }
     }
 
-    return NextResponse.json({ success: true, orders: INITIAL_ORDERS });
+    let filteredInitial = INITIAL_ORDERS;
+    if (emailParam) {
+      filteredInitial = INITIAL_ORDERS.filter(
+        (o) => o.customerEmail?.toLowerCase() === emailParam
+      );
+    }
+
+    return NextResponse.json({ success: true, orders: filteredInitial });
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to fetch orders' },
