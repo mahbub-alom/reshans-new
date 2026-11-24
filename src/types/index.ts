@@ -15,6 +15,8 @@ export interface Product {
   description: string;
   sizes: string[];
   colors: { name: string; hex: string; image?: string }[];
+  fabric?: string;
+  fit?: string;
   inStock: boolean;
   stockCount?: number;
   isTrending?: boolean;

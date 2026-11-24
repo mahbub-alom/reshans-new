@@ -145,11 +145,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, showCategory 
 
       {/* Product Information */}
       <div className="pt-3 pb-2 flex flex-col font-satoshi">
-        {showCategory && (
-          <span className="text-[12px] font-medium text-[#7A7A7A] tracking-wider uppercase mb-1 font-satoshi-med">
-            {product.category}
-          </span>
-        )}
+        <div className="flex items-center justify-between gap-1 mb-1">
+          {showCategory && (
+            <span className="text-[12px] font-medium text-[#7A7A7A] tracking-wider uppercase font-satoshi-med truncate">
+              {product.category}
+            </span>
+          )}
+          {(product.fabric || product.fit) && (
+            <span className="text-[10px] text-gray-500 font-satoshi shrink-0 bg-gray-100 px-1.5 py-0.5 rounded-2xs">
+              {[product.fit, product.fabric].filter(Boolean).join(' • ')}
+            </span>
+          )}
+        </div>
 
         <Link
           href={productUrl}

@@ -31,6 +31,8 @@ const COLOR_OPTIONS = [
 ];
 
 const SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+const FABRIC_OPTIONS = ['Cotton', 'Linen', 'Silk', 'Wool', 'Denim', 'Alpaca', 'Waffle'];
+const FIT_OPTIONS = ['Regular Fit', 'Slim Fit', 'Relaxed Fit', 'Oversized', 'Tailored'];
 
 export const ShopPage: React.FC = () => {
   const { products, categories, navigate, formatPrice, activeCategoryFilter, setActiveCategoryFilter } = useShop();
@@ -41,6 +43,8 @@ export const ShopPage: React.FC = () => {
   const [priceRange, setPriceRange] = useState<number>(10000);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [selectedFabrics, setSelectedFabrics] = useState<string[]>([]);
+  const [selectedFits, setSelectedFits] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'default' | 'price-asc' | 'price-desc' | 'rating' | 'newest'>('default');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -162,12 +166,28 @@ export const ShopPage: React.FC = () => {
     setCurrentPage(1);
   };
 
+  const toggleFabric = (fabric: string) => {
+    setSelectedFabrics((prev) =>
+      prev.includes(fabric) ? prev.filter((f) => f !== fabric) : [...prev, fabric]
+    );
+    setCurrentPage(1);
+  };
+
+  const toggleFit = (fit: string) => {
+    setSelectedFits((prev) =>
+      prev.includes(fit) ? prev.filter((f) => f !== fit) : [...prev, fit]
+    );
+    setCurrentPage(1);
+  };
+
   const resetAllFilters = () => {
     setSelectedCategory('all');
     setSelectedAvailability([]);
     setPriceRange(10000);
     setSelectedSizes([]);
     setSelectedColors([]);
+    setSelectedFabrics([]);
+    setSelectedFits([]);
     setSearchQuery('');
     setSortBy('default');
     setCurrentPage(1);
@@ -179,6 +199,8 @@ export const ShopPage: React.FC = () => {
     (priceRange < 10000 ? 1 : 0) +
     selectedSizes.length +
     selectedColors.length +
+    selectedFabrics.length +
+    selectedFits.length +
     (searchQuery.trim() ? 1 : 0);
 
   // Filter & Sort Products
@@ -239,6 +261,22 @@ export const ShopPage: React.FC = () => {
       result = result.filter((p) =>
         p.colors && p.colors.some((c) => selectedColors.includes(c.name))
       );
+    }
+
+    // Fabric filter
+    if (selectedFabrics.length > 0) {
+      result = result.filter((p) => {
+        const text = `${p.fabric || ''} ${p.name || ''} ${p.description || ''}`.toLowerCase();
+        return selectedFabrics.some((f) => text.includes(f.toLowerCase()));
+      });
+    }
+
+    // Fit filter
+    if (selectedFits.length > 0) {
+      result = result.filter((p) => {
+        const text = `${p.fit || ''} ${p.name || ''} ${p.description || ''}`.toLowerCase();
+        return selectedFits.some((f) => text.includes(f.toLowerCase().replace(' fit', '')));
+      });
     }
 
     // Sorting
@@ -366,8 +404,8 @@ export const ShopPage: React.FC = () => {
       {/* 3. Top Filter Bar & Interactive Dropdowns (6 Columns) */}
       <section className="py-8 bg-white" ref={dropdownRef}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Top 5 Horizontal Filter Buttons */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pb-6 border-b border-gray-100">
+          {/* Top Horizontal Filter Buttons (Category, Availability, Price, Size, Color, Fabric, Fit) */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2.5 pb-6 border-b border-gray-100">
             {/* 1. Category Dropdown */}
             <div className="relative">
               <button
@@ -648,6 +686,94 @@ export const ShopPage: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* 6. Fabric Dropdown */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => toggleDropdown('fabric')}
+                className={`w-full py-2.5 px-3 rounded-sm border text-xs sm:text-sm font-satoshi-med flex items-center justify-between transition-all cursor-pointer ${
+                  openDropdown === 'fabric' || selectedFabrics.length > 0
+                    ? 'border-[#093624] text-[#093624] bg-[#093624]/5'
+                    : 'border-gray-200 text-[#141414] hover:border-gray-300'
+                }`}
+              >
+                <span className="truncate">
+                  {selectedFabrics.length > 0 ? `Fabric (${selectedFabrics.length})` : 'Fabric'}
+                </span>
+                <ChevronDown
+                  size={14}
+                  className={`transition-transform duration-200 ${
+                    openDropdown === 'fabric' ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {openDropdown === 'fabric' && (
+                <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 w-52 bg-white rounded-md shadow-xl border border-gray-100 p-3 z-30 animate-in fade-in slide-in-from-top-1 duration-150">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2 pb-1 border-b">
+                    Fabric / Material
+                  </h4>
+                  <div className="space-y-1.5 text-xs font-satoshi-med">
+                    {FABRIC_OPTIONS.map((f) => (
+                      <label key={f} className="flex items-center gap-2 cursor-pointer hover:text-[#093624] py-0.5">
+                        <input
+                          type="checkbox"
+                          checked={selectedFabrics.includes(f)}
+                          onChange={() => toggleFabric(f)}
+                          className="rounded text-[#093624] focus:ring-[#093624] cursor-pointer"
+                        />
+                        <span>{f}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 7. Fit Dropdown */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => toggleDropdown('fit')}
+                className={`w-full py-2.5 px-3 rounded-sm border text-xs sm:text-sm font-satoshi-med flex items-center justify-between transition-all cursor-pointer ${
+                  openDropdown === 'fit' || selectedFits.length > 0
+                    ? 'border-[#093624] text-[#093624] bg-[#093624]/5'
+                    : 'border-gray-200 text-[#141414] hover:border-gray-300'
+                }`}
+              >
+                <span className="truncate">
+                  {selectedFits.length > 0 ? `Fit (${selectedFits.length})` : 'Fit'}
+                </span>
+                <ChevronDown
+                  size={14}
+                  className={`transition-transform duration-200 ${
+                    openDropdown === 'fit' ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {openDropdown === 'fit' && (
+                <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 w-48 bg-white rounded-md shadow-xl border border-gray-100 p-3 z-30 animate-in fade-in slide-in-from-top-1 duration-150">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2 pb-1 border-b">
+                    Fit / Silhouette
+                  </h4>
+                  <div className="space-y-1.5 text-xs font-satoshi-med">
+                    {FIT_OPTIONS.map((fit) => (
+                      <label key={fit} className="flex items-center gap-2 cursor-pointer hover:text-[#093624] py-0.5">
+                        <input
+                          type="checkbox"
+                          checked={selectedFits.includes(fit)}
+                          onChange={() => toggleFit(fit)}
+                          className="rounded text-[#093624] focus:ring-[#093624] cursor-pointer"
+                        />
+                        <span>{fit}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Filter Status Bar, Active Chips & Sort Selector */}
@@ -716,6 +842,30 @@ export const ShopPage: React.FC = () => {
                 >
                   Color: {col}
                   <button onClick={() => toggleColor(col)} className="hover:text-[#093624] cursor-pointer">
+                    <X size={12} />
+                  </button>
+                </span>
+              ))}
+
+              {selectedFabrics.map((fab) => (
+                <span
+                  key={fab}
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-satoshi-med bg-gray-100 text-gray-800 border border-gray-200"
+                >
+                  Fabric: {fab}
+                  <button onClick={() => toggleFabric(fab)} className="hover:text-[#093624] cursor-pointer">
+                    <X size={12} />
+                  </button>
+                </span>
+              ))}
+
+              {selectedFits.map((fit) => (
+                <span
+                  key={fit}
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-satoshi-med bg-gray-100 text-gray-800 border border-gray-200"
+                >
+                  Fit: {fit}
+                  <button onClick={() => toggleFit(fit)} className="hover:text-[#093624] cursor-pointer">
                     <X size={12} />
                   </button>
                 </span>

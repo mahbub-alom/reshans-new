@@ -15,6 +15,8 @@ import { Product } from '../../../types';
 import { useShop } from '../../../context/ShopContext';
 
 const PAGE_OPTIONS = ['Shop', 'Men', 'Women', 'Collections'] as const;
+const FABRIC_OPTIONS = ['100% Cotton', 'Organic Linen', 'Pure Silk', 'Peruvian Alpaca & Wool', 'Denim Twill', 'Cashmere Blend', 'Cotton Waffle', 'Spandex Stretch'];
+const FIT_OPTIONS = ['Regular Fit', 'Slim Fit', 'Relaxed Fit', 'Oversized', 'Tailored'];
 
 export const AdminProductsTab: React.FC = () => {
   const {
@@ -56,6 +58,8 @@ export const AdminProductsTab: React.FC = () => {
     frontImage: '',
     backImage: '',
     description: 'Artisanal garment handcrafted from premium organic fibers tailored for modern elegance.',
+    fabric: '100% Cotton',
+    fit: 'Regular Fit',
     sizes: ['S', 'M', 'L', 'XL'],
     inStock: true,
     stockCount: 30,
@@ -103,6 +107,8 @@ export const AdminProductsTab: React.FC = () => {
       frontImage: prod.frontImage,
       backImage: prod.backImage || prod.frontImage,
       description: prod.description,
+      fabric: prod.fabric || '100% Cotton',
+      fit: prod.fit || 'Regular Fit',
       sizes: prod.sizes || ['S', 'M', 'L', 'XL'],
       inStock: prod.inStock,
       stockCount: prod.stockCount !== undefined ? prod.stockCount : 25,
@@ -215,6 +221,8 @@ export const AdminProductsTab: React.FC = () => {
         frontImage: formData.frontImage,
         backImage: formData.backImage || formData.frontImage,
         description: formData.description,
+        fabric: formData.fabric,
+        fit: formData.fit,
         sizes: formData.sizes,
         inStock: formData.inStock,
         stockCount: Number(formData.stockCount),
@@ -239,6 +247,8 @@ export const AdminProductsTab: React.FC = () => {
         frontImage: formData.frontImage,
         backImage: formData.backImage || formData.frontImage,
         description: formData.description,
+        fabric: formData.fabric,
+        fit: formData.fit,
         sizes: formData.sizes,
         colors: [
           { name: 'Deep Forest', hex: '#093624' },
@@ -636,6 +646,43 @@ export const AdminProductsTab: React.FC = () => {
                     Please upload an image for this product. Static or local images are disabled.
                   </p>
                 )}
+              </div>
+
+              {/* Fabric & Fit fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-satoshi-bold uppercase tracking-wider text-brand-body mb-1">
+                    Fabric / Material
+                  </label>
+                  <select
+                    value={formData.fabric}
+                    onChange={(e) => setFormData({ ...formData, fabric: e.target.value })}
+                    className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs text-xs font-satoshi focus:outline-none focus:border-[#093624]"
+                  >
+                    {FABRIC_OPTIONS.map((f) => (
+                      <option key={f} value={f}>
+                        {f}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-satoshi-bold uppercase tracking-wider text-brand-body mb-1">
+                    Garment Fit
+                  </label>
+                  <select
+                    value={formData.fit}
+                    onChange={(e) => setFormData({ ...formData, fit: e.target.value })}
+                    className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs text-xs font-satoshi focus:outline-none focus:border-[#093624]"
+                  >
+                    {FIT_OPTIONS.map((fit) => (
+                      <option key={fit} value={fit}>
+                        {fit}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* Sizes Available */}
