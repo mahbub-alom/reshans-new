@@ -77,12 +77,11 @@ export const AdminReturnsTab: React.FC = () => {
 
     if (res.success) {
       setActionMessage({ type: 'success', text: `Return status updated to ${newStatus} successfully.` });
-      setSelectedReturn({
-        ...selectedReturn,
-        status: newStatus as any,
-        adminNotes: adminNotes,
-      });
       await refreshReturnRequests();
+      // Requirement 5: modal turns off upon saving status successfully
+      setTimeout(() => {
+        setSelectedReturn(null);
+      }, 700);
     } else {
       setActionMessage({ type: 'error', text: res.error || 'Failed to update return status.' });
     }
@@ -328,7 +327,7 @@ export const AdminReturnsTab: React.FC = () => {
                   </span>
                   <div className="text-brand-black flex items-start gap-1.5">
                     <MapPin size={14} className="text-primary shrink-0 mt-0.5" />
-                    <span>{selectedReturn.pickupAddress || 'No pickup address specified'}</span>
+                    <span>{selectedReturn.pickupAddress || selectedReturn.customerAddress || 'No pickup address specified'}</span>
                   </div>
                 </div>
               </div>
@@ -336,12 +335,17 @@ export const AdminReturnsTab: React.FC = () => {
               {/* Return Reason & Customer Notes */}
               <div className="space-y-2">
                 <span className="block text-[11px] text-brand-body uppercase font-bold">
-                  Return Reason & Notes
+                  Return Reason & Customer Notes
                 </span>
                 <div className="p-3 bg-[#FAF9F8] border border-[#EBEBEB]">
                   <strong className="text-brand-black block">Reason: {selectedReturn.reason}</strong>
-                  {selectedReturn.notes && (
-                    <p className="text-brand-body mt-1 text-[11px]">Note: "{selectedReturn.notes}"</p>
+                  {(selectedReturn.notes || selectedReturn.details) ? (
+                    <div className="mt-1.5 p-2 bg-white border border-[#E8E5E3] text-[11px] text-brand-black">
+                      <span className="font-bold block text-gray-500 text-[10px] uppercase">Customer Message / Note:</span>
+                      <p className="mt-0.5 font-medium">{selectedReturn.notes || selectedReturn.details}</p>
+                    </div>
+                  ) : (
+                    <p className="text-gray-400 mt-1 text-[11px] italic">No extra customer note provided</p>
                   )}
                 </div>
               </div>

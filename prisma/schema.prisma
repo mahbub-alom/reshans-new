@@ -192,6 +192,10 @@ model Order {
   customerEmail   String
   customerPhone   String
   customerAddress String        @db.Text
+  city            String?       // District (e.g. Dhaka, Chattogram)
+  area            String?       // Thana / Upazila (e.g. Banani, Dhanmondi)
+  postalCode      String?       // Postal / Zip Code (e.g. 1213)
+  shippingZone    String?       // inside_dhaka, outside_dhaka
   total           Float
   subtotal        Float
   deliveryFee     Float         @default(60.0)

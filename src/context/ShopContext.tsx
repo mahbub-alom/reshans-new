@@ -383,6 +383,33 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkCurrentSession();
   }, []);
 
+  // Real-time synchronization interval for return requests and orders (no manual page reload needed)
+  useEffect(() => {
+    const syncInterval = setInterval(() => {
+      // Sync return requests
+      fetch('/api/returns')
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.returnRequests)) {
+            setReturnRequests(data.returnRequests);
+          }
+        })
+        .catch(() => {});
+
+      // Sync orders
+      fetch('/api/orders')
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.orders)) {
+            setOrders(data.orders);
+          }
+        })
+        .catch(() => {});
+    }, 4000);
+
+    return () => clearInterval(syncInterval);
+  }, []);
+
   const loginUser = async (email: string, password: string) => {
     try {
       const res = await fetch('/api/auth/login', {
@@ -834,7 +861,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       customerName: payload.customerName,
       customerEmail: payload.customerEmail,
       customerPhone: payload.customerPhone,
-      customerAddress: fullAddress,
+      customerAddress: payload.customerAddress,
       city: payload.city,
       area: payload.area,
       postalCode: payload.postalCode,
@@ -879,6 +906,11 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       },
       body: JSON.stringify({
         ...payload,
+        customerAddress: payload.customerAddress,
+        city: payload.city,
+        area: payload.area,
+        postalCode: payload.postalCode,
+        shippingZone: payload.shippingZone,
         orderId: newOrder.id,
         trackingNumber: trackingCode,
         userId: currentUser?.id,

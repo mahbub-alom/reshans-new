@@ -48,7 +48,7 @@ export const DashboardReturnRequestPage: React.FC = () => {
     }
   }, [selectedOrder, deliveredOrders]);
   const [returnReason, setReturnReason] = useState('Damaged product');
-  const [selectedProductIndices, setSelectedProductIndices] = useState<number[]>([0]);
+  const [selectedProductIndices, setSelectedProductIndices] = useState<number[]>([]);
   const [customerNotes, setCustomerNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -66,7 +66,7 @@ export const DashboardReturnRequestPage: React.FC = () => {
 
   const handleOrderChange = (newId: string) => {
     setChosenOrderId(newId);
-    setSelectedProductIndices([0]);
+    setSelectedProductIndices([]);
     setSubmitError(null);
   };
 

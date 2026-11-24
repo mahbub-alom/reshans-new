@@ -25,7 +25,20 @@ export async function GET(request: Request) {
 
         const dbOrders = await prisma.order.findMany({
           where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
-          include: { items: true },
+          include: {
+            items: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                role: true,
+                authProvider: true,
+                createdAt: true,
+              },
+            },
+          },
           orderBy: { createdAt: 'desc' },
         });
 
@@ -33,10 +46,26 @@ export async function GET(request: Request) {
           const formatted = dbOrders.map((ord: any) => ({
             id: ord.id || ord.orderNumber,
             orderNumber: ord.orderNumber || ord.id,
+            userId: ord.userId || undefined,
+            user: ord.user
+              ? {
+                  id: ord.user.id,
+                  name: ord.user.name,
+                  email: ord.user.email,
+                  phone: ord.user.phone || undefined,
+                  role: ord.user.role,
+                  authProvider: ord.user.authProvider,
+                  createdAt: ord.user.createdAt ? new Date(ord.user.createdAt).toLocaleDateString() : undefined,
+                }
+              : undefined,
             customerName: ord.customerName,
             customerEmail: ord.customerEmail,
             customerPhone: ord.customerPhone,
             customerAddress: ord.customerAddress,
+            city: ord.city || undefined,
+            area: ord.area || undefined,
+            postalCode: ord.postalCode || undefined,
+            shippingZone: ord.shippingZone || undefined,
             date: ord.createdAt ? new Date(ord.createdAt).toISOString().replace('T', ' ').substring(0, 16) : '',
             items: (ord.items || []).map((it: any) => ({
               product: {
@@ -102,7 +131,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { customerName, customerEmail, customerPhone, customerAddress, items, total, role, userId } = body;
+    const { customerName, customerEmail, customerPhone, customerAddress, city, area, postalCode, shippingZone, items, total, role, userId } = body;
 
     // Requirement 2: Admin cannot place orders
     if (role === 'ADMIN' || body.isAdmin) {
@@ -142,6 +171,10 @@ export async function POST(request: Request) {
       customerEmail: customerEmail.toLowerCase(),
       customerPhone: customerPhone || '+880 1700 000 000',
       customerAddress: customerAddress || 'Dhaka, Bangladesh',
+      city: city || 'Dhaka',
+      area: area || '',
+      postalCode: postalCode || '',
+      shippingZone: shippingZone || 'inside_dhaka',
       date: dateStr,
       items: items || [],
       total: Number(total),
@@ -180,6 +213,10 @@ export async function POST(request: Request) {
             customerEmail: customerEmail.toLowerCase(),
             customerPhone: customerPhone || '',
             customerAddress: customerAddress || '',
+            city: city || null,
+            area: area || null,
+            postalCode: postalCode || null,
+            shippingZone: shippingZone || null,
             note: body.note || null,
             items: {
               create: (items || []).map((item: any) => ({

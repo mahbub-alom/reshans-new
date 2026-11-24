@@ -51,19 +51,20 @@ export const CheckoutPage: React.FC = () => {
     currentUser,
     isAuthenticated,
     isAdmin,
+    authLoading,
   } = useShop();
 
   // Requirement 3: Enforce Login / Signup before Checkout.
   // If not logged in, redirect to login or signup with returnUrl to /checkout.
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!authLoading && !isAuthenticated) {
       if (typeof window !== 'undefined') {
         localStorage.setItem('reshans_return_url', '/checkout');
       }
       showToast('Please sign in or create an account to proceed with checkout.');
       navigate('/login');
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, authLoading]);
 
   const isBuyNow = checkoutMode === 'buy-now' && buyNowItem !== null;
   const activeItems = isBuyNow && buyNowItem ? [buyNowItem] : cart;
@@ -1100,7 +1101,7 @@ export const CheckoutPage: React.FC = () => {
                     </div>
 
                     {/* Step 1 Primary Action */}
-                    <div className="pt-5 border-t border-gray-100 flex items-center justify-between">
+                    <div className="pt-5 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
                       <button
                         type="button"
                         onClick={() =>
@@ -1108,13 +1109,20 @@ export const CheckoutPage: React.FC = () => {
                             ? navigate(`/product/${buyNowItem?.product.id || ''}`)
                             : navigate('/cart')
                         }
-                        className="inline-flex items-center gap-1.5 text-xs text-[#6D6868] hover:text-[#093624] font-satoshi-bold cursor-pointer"
+                        className="inline-flex items-center gap-1.5 text-xs text-[#6D6868] hover:text-[#093624] font-satoshi-bold cursor-pointer order-2 sm:order-1"
                       >
                         <ArrowLeft size={13} />
                         <span>{isBuyNow ? 'Return to Product' : 'Return to Cart'}</span>
                       </button>
 
-                      
+                      <button
+                        type="button"
+                        onClick={handleProceedToPayment}
+                        className="w-full sm:w-auto px-8 py-3.5 bg-[#093624] hover:bg-[#052216] text-[#F9F295] hover:text-white font-bold text-xs uppercase tracking-wider rounded-xs flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer font-satoshi-bold order-1 sm:order-2"
+                      >
+                        <span>Continue to Payment (Step 2)</span>
+                        <ArrowRight size={15} />
+                      </button>
                     </div>
                   </div>
                 </>
@@ -1380,17 +1388,15 @@ export const CheckoutPage: React.FC = () => {
                     </div>
                   )}
 
-                  <div className="pt-2 flex items-center justify-between border-t border-gray-100">
+                  <div className="pt-4 flex items-center justify-start border-t border-gray-100">
                     <button
                       type="button"
                       onClick={handleBackToAddress}
                       className="inline-flex items-center gap-1.5 text-xs text-[#6D6868] hover:text-[#093624] font-satoshi-bold cursor-pointer"
                     >
                       <ArrowLeft size={13} />
-                      <span>Back to Address</span>
+                      <span>Back to Address (Step 1)</span>
                     </button>
-
-                    
                   </div>
                 </div>
               )}
@@ -1554,21 +1560,12 @@ export const CheckoutPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Place Order or Continue to Payment Button */}
-                {checkoutStep === 1 ? (
-                  <button
-                    type="button"
-                    onClick={handleProceedToPayment}
-                    className="w-full h-13 bg-[#093624] hover:bg-[#052216] text-[#F9F295] hover:text-white font-bold text-xs uppercase tracking-wider rounded-xs flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer font-satoshi-bold"
-                  >
-                    <span>Continue to Payment</span>
-                    <ArrowRight size={15} />
-                  </button>
-                ) : (
+                {/* Place Order Button - Active only in Step 2 */}
+                {checkoutStep === 2 && (
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full h-13 bg-[#093624] hover:bg-[#052216] disabled:opacity-60 text-[#F9F295] hover:text-white font-bold text-xs uppercase tracking-wider rounded-xs flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer font-satoshi-bold"
+                    className="w-full h-13 bg-[#093624] hover:bg-[#052216] disabled:opacity-60 text-[#F9F295] hover:text-white font-bold text-xs uppercase tracking-wider rounded-xs flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer font-satoshi-bold animate-in fade-in duration-200"
                   >
                     <Lock size={14} />
                     <span>

@@ -67,6 +67,17 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
+  orderNumber?: string;
+  userId?: string;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string;
+    role?: string;
+    authProvider?: string;
+    createdAt?: string;
+  };
   customerName: string;
   customerEmail: string;
   customerPhone: string;
@@ -141,6 +152,12 @@ export interface ReturnRequestItem {
   returnNumber: string;
   orderId: string;
   userId?: string;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    role?: string;
+  };
   customerName: string;
   customerEmail: string;
   customerPhone?: string;

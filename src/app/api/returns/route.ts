@@ -31,6 +31,14 @@ export async function GET(request: Request) {
                 trackingNumber: true,
               },
             },
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+              },
+            },
           },
         });
 
@@ -39,14 +47,17 @@ export async function GET(request: Request) {
           returnNumber: r.returnNumber,
           orderId: r.orderId,
           userId: r.userId || undefined,
+          user: r.user ? { id: r.user.id, name: r.user.name, email: r.user.email, role: r.user.role } : undefined,
           customerName: r.customerName,
           customerEmail: r.customerEmail,
           customerPhone: r.customerPhone,
           customerAddress: r.customerAddress,
+          pickupAddress: r.customerAddress,
           items: typeof r.itemsJson === 'string' ? JSON.parse(r.itemsJson || '[]') : r.itemsJson || [],
           refundAmount: r.refundAmount,
           reason: r.reason,
           details: r.details || undefined,
+          notes: r.details || undefined,
           status: r.status,
           adminNotes: r.adminNotes || undefined,
           createdAt: r.createdAt ? new Date(r.createdAt).toISOString().replace('T', ' ').substring(0, 16) : '',
@@ -74,10 +85,12 @@ export async function POST(request: Request) {
       customerEmail,
       customerPhone,
       customerAddress,
+      pickupAddress,
       items,
       refundAmount,
       reason,
       details,
+      notes,
       userId,
     } = body;
 
@@ -118,6 +131,9 @@ export async function POST(request: Request) {
     const returnNumber = `RET-${new Date().getFullYear()}-${randomSuffix}`;
     const itemsJsonStr = JSON.stringify(items);
 
+    const effectiveNotes = notes || details || '';
+    const effectiveAddress = pickupAddress || customerAddress || '';
+
     let savedRequest: any = {
       id: returnNumber,
       returnNumber,
@@ -126,11 +142,13 @@ export async function POST(request: Request) {
       customerName: customerName || 'Customer',
       customerEmail: (customerEmail || '').toLowerCase(),
       customerPhone: customerPhone || '',
-      customerAddress: customerAddress || '',
+      customerAddress: effectiveAddress,
+      pickupAddress: effectiveAddress,
       items,
       refundAmount: Number(refundAmount || 0),
       reason: reason || 'Defective / Damaged',
-      details: details || '',
+      details: effectiveNotes,
+      notes: effectiveNotes,
       status: 'Pending',
       createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
     };
@@ -146,11 +164,11 @@ export async function POST(request: Request) {
             customerName: customerName || 'Customer',
             customerEmail: (customerEmail || '').toLowerCase(),
             customerPhone: customerPhone || '',
-            customerAddress: customerAddress || '',
+            customerAddress: effectiveAddress,
             itemsJson: itemsJsonStr,
             refundAmount: Number(refundAmount || 0),
             reason: reason || 'Defective / Damaged',
-            details: details || null,
+            details: effectiveNotes || null,
             status: 'Pending',
           },
         });

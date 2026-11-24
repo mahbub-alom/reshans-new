@@ -287,41 +287,127 @@ export const AdminOrdersTab: React.FC = () => {
             </div>
 
             <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto font-satoshi">
-              {/* Customer Info Card */}
+              {/* Customer & Account Details Card */}
               <div className="bg-[#F9F9F9] border border-[#EBEBEB] p-4 rounded-xs">
-                <h4 className="text-xs font-satoshi-bold uppercase tracking-wider text-brand-body mb-3">
-                  Customer & Delivery Details
-                </h4>
+                <div className="flex items-center justify-between border-b border-gray-200 pb-2 mb-3">
+                  <h4 className="text-xs font-satoshi-bold uppercase tracking-wider text-brand-body">
+                    Delivery & Consignment Information
+                  </h4>
+                  {selectedOrder.user ? (
+                    <span className="px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-300 rounded text-[10px] font-bold">
+                      Registered Member Account
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-700 border border-gray-300 rounded text-[10px] font-bold">
+                      Direct / Checkout Account
+                    </span>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  {/* Account Information */}
+                  <div className="p-2.5 bg-white border border-[#EBEBEB] rounded-xs space-y-1 sm:col-span-2">
+                    <span className="text-gray-400 block text-[10px] uppercase font-bold text-primary">
+                      Ordered From Account:
+                    </span>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <span className="font-bold text-brand-black text-sm block">
+                          {selectedOrder.user?.name || selectedOrder.customerName}
+                        </span>
+                        <span className="text-brand-body text-[11px] block">
+                          Email: <strong className="text-brand-black">{selectedOrder.customerEmail}</strong>
+                        </span>
+                      </div>
+                      <div className="text-right text-[11px] text-brand-body">
+                        {selectedOrder.user?.role && (
+                          <span className="inline-block px-1.5 py-0.5 bg-gray-100 font-mono text-[10px] uppercase text-gray-700 mr-2">
+                            Role: {selectedOrder.user.role}
+                          </span>
+                        )}
+                        {selectedOrder.user?.authProvider && (
+                          <span className="inline-block px-1.5 py-0.5 bg-blue-50 text-blue-700 text-[10px] uppercase">
+                            Auth: {selectedOrder.user.authProvider}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Recipient Contact */}
                   <div>
-                    <span className="text-gray-400 block text-[10px]">Name:</span>
+                    <span className="text-gray-400 block text-[10px]">Recipient Contact:</span>
                     <span className="font-satoshi-bold text-[#141414]">{selectedOrder.customerName}</span>
+                    <span className="block text-brand-body text-[11px]">{selectedOrder.customerPhone}</span>
                   </div>
+
+                  {/* Shipping Zone */}
                   <div>
-                    <span className="text-gray-400 block text-[10px]">Phone:</span>
-                    <span className="font-satoshi-bold text-[#141414]">{selectedOrder.customerPhone}</span>
+                    <span className="text-gray-400 block text-[10px]">Delivery Zone:</span>
+                    <span className="font-satoshi-bold text-[#141414]">
+                      {selectedOrder.shippingZone === 'inside_dhaka'
+                        ? 'Inside Dhaka (Standard ৳60)'
+                        : selectedOrder.shippingZone === 'outside_dhaka'
+                        ? 'Outside Dhaka (Courier ৳120)'
+                        : selectedOrder.customerAddress?.toLowerCase().includes('dhaka')
+                        ? 'Inside Dhaka'
+                        : 'Outside Dhaka'}
+                    </span>
                   </div>
-                  <div className="sm:col-span-2">
-                    <span className="text-gray-400 block text-[10px]">Shipping Address:</span>
-                    <span className="text-gray-700">{selectedOrder.customerAddress}</span>
+
+                  {/* Full Destination Address */}
+                  <div className="sm:col-span-2 p-3 bg-white border border-[#EBEBEB] rounded-xs space-y-2">
+                    <span className="text-gray-400 block text-[10px] font-bold uppercase">
+                      Street & Delivery Address:
+                    </span>
+                    <p className="text-brand-black font-medium leading-relaxed text-xs">
+                      {selectedOrder.customerAddress}
+                    </p>
+
+                    {/* Distinct Breakdown: District, Thana/Upazila, Postal Code */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-gray-100 text-xs">
+                      <div className="bg-[#FAF9F8] p-2 border border-gray-200">
+                        <span className="block text-[10px] text-gray-400 uppercase font-bold">District / City:</span>
+                        <span className="font-bold text-brand-black">{selectedOrder.city || 'Dhaka'}</span>
+                      </div>
+                      <div className="bg-[#FAF9F8] p-2 border border-gray-200">
+                        <span className="block text-[10px] text-gray-400 uppercase font-bold">Thana / Area:</span>
+                        <span className="font-bold text-brand-black">{selectedOrder.area || 'N/A'}</span>
+                      </div>
+                      <div className="bg-[#FAF9F8] p-2 border border-gray-200">
+                        <span className="block text-[10px] text-gray-400 uppercase font-bold">Postal Code:</span>
+                        <span className="font-bold text-[#093624] font-mono">{selectedOrder.postalCode || 'N/A'}</span>
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Tracking & Payment Details */}
                   {selectedOrder.trackingNumber && (
                     <div>
-                      <span className="text-gray-400 block text-[10px]">Tracking Code:</span>
-                      <span className="font-mono font-bold text-[#093624]">{selectedOrder.trackingNumber}</span>
+                      <span className="text-gray-400 block text-[10px]">Courier Consignment Code:</span>
+                      <span className="font-mono font-bold text-[#093624] text-xs">{selectedOrder.trackingNumber}</span>
                     </div>
                   )}
+
+                  <div>
+                    <span className="text-gray-400 block text-[10px]">Payment Method:</span>
+                    <span className="font-satoshi-bold text-brand-black">
+                      {selectedOrder.paymentMethod} ({selectedOrder.paymentStatus})
+                    </span>
+                  </div>
+
                   {selectedOrder.bkashTransactionId && (
-                    <div>
-                      <span className="text-gray-400 block text-[10px]">bKash Payment:</span>
-                      <span className="font-satoshi-bold text-[#093624]">
-                        {selectedOrder.bkashNumber} · TrxID: {selectedOrder.bkashTransactionId}
+                    <div className="sm:col-span-2 p-2 bg-pink-50 border border-pink-200 text-pink-900 rounded-xs">
+                      <span className="text-pink-700 block text-[10px] font-bold uppercase">bKash Verification:</span>
+                      <span className="font-mono font-bold">
+                        Sender: {selectedOrder.bkashNumber} · TrxID: {selectedOrder.bkashTransactionId}
                       </span>
                     </div>
                   )}
+
                   {selectedOrder.note && (
                     <div className="sm:col-span-2 p-2 bg-[#F9F295]/50 border border-[#093624]/30 rounded-xs text-[#093624] text-[11px]">
-                      <strong>Customer Note:</strong> {selectedOrder.note}
+                      <strong>Customer Delivery Instructions / Note:</strong> {selectedOrder.note}
                     </div>
                   )}
                 </div>
