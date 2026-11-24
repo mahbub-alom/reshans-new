@@ -221,7 +221,10 @@ export const DashboardInvoiceDetailsPage: React.FC = () => {
               <p style="font-size:14px; font-weight:bold;">${order.customerName}</p>
               <p>${order.customerPhone}</p>
               ${order.customerEmail ? `<p>${order.customerEmail}</p>` : ''}
-              <p style="margin-top:4px; max-width:280px; color:#4b5563;">${order.customerAddress}</p>
+              <p style="margin-top:4px; max-width:320px; color:#4b5563;">
+                ${order.customerAddress}
+                ${order.area || order.city || order.postalCode ? `<br/><span>${[order.area, order.city, order.postalCode ? `(${order.postalCode})` : ''].filter(Boolean).join(', ')}</span>` : ''}
+              </p>
             </div>
             <div style="text-align:right;">
               <div class="addr-label">Order Details:</div>
@@ -409,9 +412,28 @@ export const DashboardInvoiceDetailsPage: React.FC = () => {
               </h3>
               <p className="text-brand-body">{order.customerPhone}</p>
               {order.customerEmail && <p className="text-brand-body">{order.customerEmail}</p>}
-              <p className="text-brand-body mt-1 leading-relaxed max-w-xs">
+              <p className="text-brand-body mt-1 leading-relaxed max-w-sm">
                 {order.customerAddress}
               </p>
+              {(order.area || order.city || order.postalCode) && (
+                <div className="mt-1.5 flex flex-wrap gap-1.5 text-[11px]">
+                  {order.city && (
+                    <span className="px-2 py-0.5 bg-gray-100 border border-gray-200 text-gray-700 font-medium">
+                      District: {order.city}
+                    </span>
+                  )}
+                  {order.area && (
+                    <span className="px-2 py-0.5 bg-gray-100 border border-gray-200 text-gray-700 font-medium">
+                      Thana: {order.area}
+                    </span>
+                  )}
+                  {order.postalCode && (
+                    <span className="px-2 py-0.5 bg-[#093624]/10 border border-[#093624]/20 text-[#093624] font-mono font-bold">
+                      Postcode: {order.postalCode}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="sm:text-right space-y-1.5">

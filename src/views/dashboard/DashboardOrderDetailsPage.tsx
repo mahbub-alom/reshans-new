@@ -254,6 +254,11 @@ export const DashboardOrderDetailsPage: React.FC = () => {
                 <p className="text-brand-body">{order.customerPhone}</p>
                 <p className="text-brand-body">{order.customerEmail}</p>
                 <p className="text-brand-body leading-relaxed">{order.customerAddress}</p>
+                {(order.area || order.city || order.postalCode) && (
+                  <p className="text-[11px] text-[#093624] font-medium pt-1">
+                    {[order.area ? `Area: ${order.area}` : '', order.city ? `District: ${order.city}` : '', order.postalCode ? `Postal: ${order.postalCode}` : ''].filter(Boolean).join(' | ')}
+                  </p>
+                )}
               </div>
             </div>
           </div>

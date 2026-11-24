@@ -19,6 +19,7 @@ import {
   CreditCard,
   RefreshCw,
   Download,
+  User,
 } from 'lucide-react';
 import { Order, OrderStatus } from '../../../types';
 import { useShop } from '../../../context/ShopContext';
@@ -304,46 +305,73 @@ export const AdminOrdersTab: React.FC = () => {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                   {/* Account Information */}
-                  <div className="p-2.5 bg-white border border-[#EBEBEB] rounded-xs space-y-1 sm:col-span-2">
-                    <span className="text-gray-400 block text-[10px] uppercase font-bold text-primary">
-                      Ordered From Account:
-                    </span>
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <span className="font-bold text-brand-black text-sm block">
-                          {selectedOrder.user?.name || selectedOrder.customerName}
+                  <div className="p-3.5 bg-white border border-[#EBEBEB] rounded-xs space-y-2 sm:col-span-2 shadow-2xs">
+                    <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                      <span className="text-[11px] font-bold font-satoshi-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                        <User size={13} />
+                        <span>Account Information (Who Placed The Order)</span>
+                      </span>
+                      {selectedOrder.user ? (
+                        <span className="px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-300 rounded text-[10px] font-bold">
+                          Member ID: {selectedOrder.user.id.slice(0, 8)}...
                         </span>
-                        <span className="text-brand-body text-[11px] block">
-                          Email: <strong className="text-brand-black">{selectedOrder.customerEmail}</strong>
+                      ) : (
+                        <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-[10px]">
+                          Guest / Direct Session
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                      <div>
+                        <span className="text-gray-400 block text-[10px] uppercase font-bold">Account Name:</span>
+                        <strong className="text-brand-black text-xs block">
+                          {selectedOrder.user?.name || 'Registered Account'}
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block text-[10px] uppercase font-bold">Account Email:</span>
+                        <span className="text-brand-body text-xs font-mono font-medium block">
+                          {selectedOrder.user?.email || selectedOrder.customerEmail}
                         </span>
                       </div>
-                      <div className="text-right text-[11px] text-brand-body">
-                        {selectedOrder.user?.role && (
-                          <span className="inline-block px-1.5 py-0.5 bg-gray-100 font-mono text-[10px] uppercase text-gray-700 mr-2">
-                            Role: {selectedOrder.user.role}
-                          </span>
-                        )}
-                        {selectedOrder.user?.authProvider && (
-                          <span className="inline-block px-1.5 py-0.5 bg-blue-50 text-blue-700 text-[10px] uppercase">
-                            Auth: {selectedOrder.user.authProvider}
-                          </span>
-                        )}
+                      <div>
+                        <span className="text-gray-400 block text-[10px] uppercase font-bold">Account Phone / Role:</span>
+                        <span className="text-brand-body text-xs block">
+                          {selectedOrder.user?.phone || 'On File'}
+                          {selectedOrder.user?.role ? ` (${selectedOrder.user.role})` : ''}
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Recipient Contact */}
-                  <div>
-                    <span className="text-gray-400 block text-[10px]">Recipient Contact:</span>
-                    <span className="font-satoshi-bold text-[#141414]">{selectedOrder.customerName}</span>
-                    <span className="block text-brand-body text-[11px]">{selectedOrder.customerPhone}</span>
+                  {/* Checkout Recipient Info (Given during order placement) */}
+                  <div className="p-3.5 bg-white border border-[#EBEBEB] rounded-xs space-y-2 sm:col-span-2 shadow-2xs">
+                    <span className="text-[11px] font-bold font-satoshi-bold uppercase tracking-wider text-brand-black block border-b border-gray-100 pb-1.5">
+                      Checkout Recipient Information (Provided at Checkout)
+                    </span>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                      <div>
+                        <span className="text-gray-400 block text-[10px] uppercase font-bold">Recipient Name:</span>
+                        <strong className="text-brand-black text-sm block">{selectedOrder.customerName}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block text-[10px] uppercase font-bold">Contact Phone:</span>
+                        <strong className="text-[#093624] text-xs font-mono block">{selectedOrder.customerPhone}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block text-[10px] uppercase font-bold">Order Email:</span>
+                        <span className="text-brand-body text-xs font-mono block">{selectedOrder.customerEmail}</span>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Shipping Zone */}
                   <div>
-                    <span className="text-gray-400 block text-[10px]">Delivery Zone:</span>
+                    <span className="text-gray-400 block text-[10px] uppercase font-bold">Delivery Zone:</span>
                     <span className="font-satoshi-bold text-[#141414]">
                       {selectedOrder.shippingZone === 'inside_dhaka'
                         ? 'Inside Dhaka (Standard ৳60)'
@@ -355,28 +383,36 @@ export const AdminOrdersTab: React.FC = () => {
                     </span>
                   </div>
 
+                  {/* Courier Tracking */}
+                  <div>
+                    <span className="text-gray-400 block text-[10px] uppercase font-bold">Tracking Consignment:</span>
+                    <span className="font-mono font-bold text-[#093624] text-xs">
+                      {selectedOrder.trackingNumber || 'Pending Courier Assignment'}
+                    </span>
+                  </div>
+
                   {/* Full Destination Address */}
-                  <div className="sm:col-span-2 p-3 bg-white border border-[#EBEBEB] rounded-xs space-y-2">
+                  <div className="sm:col-span-2 p-3 bg-white border border-[#EBEBEB] rounded-xs space-y-2 shadow-2xs">
                     <span className="text-gray-400 block text-[10px] font-bold uppercase">
                       Street & Delivery Address:
                     </span>
-                    <p className="text-brand-black font-medium leading-relaxed text-xs">
+                    <p className="text-brand-black font-bold leading-relaxed text-sm">
                       {selectedOrder.customerAddress}
                     </p>
 
                     {/* Distinct Breakdown: District, Thana/Upazila, Postal Code */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-gray-100 text-xs">
-                      <div className="bg-[#FAF9F8] p-2 border border-gray-200">
-                        <span className="block text-[10px] text-gray-400 uppercase font-bold">District / City:</span>
-                        <span className="font-bold text-brand-black">{selectedOrder.city || 'Dhaka'}</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-gray-100 text-xs">
+                      <div className="bg-[#FAF9F8] p-2.5 border border-gray-200">
+                        <span className="block text-[10px] text-gray-500 uppercase font-bold">District / City:</span>
+                        <span className="font-bold text-brand-black text-sm">{selectedOrder.city || 'Dhaka'}</span>
                       </div>
-                      <div className="bg-[#FAF9F8] p-2 border border-gray-200">
-                        <span className="block text-[10px] text-gray-400 uppercase font-bold">Thana / Area:</span>
-                        <span className="font-bold text-brand-black">{selectedOrder.area || 'N/A'}</span>
+                      <div className="bg-[#FAF9F8] p-2.5 border border-gray-200">
+                        <span className="block text-[10px] text-gray-500 uppercase font-bold">Thana / Upazila:</span>
+                        <span className="font-bold text-brand-black text-sm">{selectedOrder.area || 'N/A'}</span>
                       </div>
-                      <div className="bg-[#FAF9F8] p-2 border border-gray-200">
-                        <span className="block text-[10px] text-gray-400 uppercase font-bold">Postal Code:</span>
-                        <span className="font-bold text-[#093624] font-mono">{selectedOrder.postalCode || 'N/A'}</span>
+                      <div className="bg-[#FAF9F8] p-2.5 border border-gray-200">
+                        <span className="block text-[10px] text-gray-500 uppercase font-bold">Postal Code:</span>
+                        <span className="font-bold text-[#093624] font-mono text-sm">{selectedOrder.postalCode || 'N/A'}</span>
                       </div>
                     </div>
                   </div>

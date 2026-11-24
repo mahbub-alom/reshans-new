@@ -61,7 +61,10 @@ export const DashboardInvoicePage: React.FC = () => {
                         {ord.customerName}
                       </p>
                       <p className="text-brand-body">{ord.customerPhone}</p>
-                      <p className="text-brand-body">{ord.customerAddress}</p>
+                      <p className="text-brand-body">
+                        {ord.customerAddress}
+                        {(ord.area || ord.city || ord.postalCode) ? `, ${[ord.area, ord.city, ord.postalCode].filter(Boolean).join(', ')}` : ''}
+                      </p>
                     </div>
                   </div>
 

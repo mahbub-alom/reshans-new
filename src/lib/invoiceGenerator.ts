@@ -14,6 +14,15 @@ export const downloadOrderInvoice = (order: Order, formatPrice: (n: number) => s
   const shipping = order.shippingCost !== undefined ? order.shippingCost : 60;
   const total = order.total;
 
+  const fullAddressLines = [
+    order.customerAddress,
+    order.area ? `Area/Thana: ${order.area}` : '',
+    order.city ? `District: ${order.city}` : '',
+    order.postalCode ? `Postal Code: ${order.postalCode}` : '',
+  ].filter(Boolean);
+
+  const formattedAddressHtml = fullAddressLines.join('<br/>');
+
   const itemsHtml = order.items
     .map(
       (it, idx) => `
@@ -87,7 +96,15 @@ export const downloadOrderInvoice = (order: Order, formatPrice: (n: number) => s
             <p><strong>${order.customerName}</strong></p>
             <p>Phone: ${order.customerPhone}</p>
             <p>Email: ${order.customerEmail}</p>
-            <p>${order.customerAddress}</p>
+            <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed #ddd; font-size: 12px; line-height: 1.5; color: #222;">
+              <strong>Full Delivery Address:</strong><br/>
+              ${formattedAddressHtml}
+            </div>
+            ${order.user ? `
+              <div style="margin-top: 6px; font-size: 11px; color: #666;">
+                <em>Account Member: ${order.user.name} (${order.user.email})</em>
+              </div>
+            ` : ''}
           </div>
           <div class="meta-col" style="text-align: right;">
             <h4>Issued By:</h4>
