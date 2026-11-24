@@ -231,11 +231,14 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const fetchStoreSettingsCouponsAndBanners = async () => {
       try {
-        const [settingsRes, couponsRes, bannersRes, productsRes] = await Promise.all([
+        const [settingsRes, couponsRes, bannersRes, productsRes, categoriesRes, brandsRes, reviewsRes] = await Promise.all([
           fetch('/api/settings'),
           fetch('/api/coupons'),
           fetch('/api/banners'),
           fetch('/api/products'),
+          fetch('/api/categories'),
+          fetch('/api/brands'),
+          fetch('/api/reviews'),
         ]);
 
         const settingsData = await settingsRes.json();
@@ -253,23 +256,39 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setBanners(bannersData.banners);
         }
 
+        const categoriesData = await categoriesRes.json();
+        if (categoriesData.success && Array.isArray(categoriesData.categories) && categoriesData.categories.length > 0) {
+          setCategories(categoriesData.categories);
+        }
+
+        const brandsData = await brandsRes.json();
+        if (brandsData.success && Array.isArray(brandsData.brands) && brandsData.brands.length > 0) {
+          setBrands(brandsData.brands);
+        }
+
+        const reviewsData = await reviewsRes.json();
+        if (reviewsData.success && Array.isArray(reviewsData.reviews) && reviewsData.reviews.length > 0) {
+          setReviews(reviewsData.reviews);
+        }
+
         const productsData = await productsRes.json();
         if (productsData.success && Array.isArray(productsData.products) && productsData.products.length > 0) {
           setProducts((prev) => {
-            // Merge DB products with local product details, preserving DB stockCount & inStock
             const dbMap = new Map(productsData.products.map((p: Product) => [p.id, p]));
-            const merged = prev.map((p) => {
-              const fromDb = dbMap.get(p.id) as Product | undefined;
-              if (fromDb) {
-                return {
-                  ...p,
-                  ...fromDb,
-                  inStock: fromDb.inStock,
-                  stockCount: fromDb.stockCount !== undefined ? fromDb.stockCount : p.stockCount,
-                };
-              }
-              return p;
+            // Merge existing and new
+            const merged = productsData.products.map((p: Product) => {
+              const local = prev.find((item) => item.id === p.id);
+              return {
+                ...local,
+                ...p,
+              };
             });
+            // Also append any strictly local ones if any
+            for (const p of prev) {
+              if (!dbMap.has(p.id)) {
+                merged.push(p);
+              }
+            }
             try {
               localStorage.setItem('reshans_products_v1', JSON.stringify(merged));
             } catch {}
@@ -887,11 +906,12 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   // Admin Product Actions
-  const addProduct = (newProdData: Omit<Product, 'id'> & { id?: string }) => {
-    const id = newProdData.id || `prod-${Date.now()}`;
+  const addProduct = async (newProdData: Omit<Product, 'id'> & { id?: string }) => {
+    const tempId = newProdData.id || `prod-${Date.now()}`;
     const newProduct: Product = {
       ...newProdData,
-      id,
+      id: tempId,
+      page: newProdData.page || 'Shop',
       inStock: newProdData.inStock !== undefined ? newProdData.inStock : true,
       stockCount: newProdData.stockCount !== undefined ? newProdData.stockCount : 20,
       rating: newProdData.rating || 5,
@@ -901,18 +921,59 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     setProducts((prev) => [newProduct, ...prev]);
     showToast(`Product "${newProduct.name}" created successfully!`);
+
+    try {
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+        body: JSON.stringify(newProduct),
+      });
+      const data = await res.json();
+      if (data.success && data.product) {
+        setProducts((prev) =>
+          prev.map((p) => (p.id === tempId ? { ...p, ...data.product } : p))
+        );
+      }
+    } catch (err) {
+      console.warn('Could not post product to API:', err);
+    }
   };
 
-  const updateProduct = (id: string, updated: Partial<Product>) => {
+  const updateProduct = async (id: string, updated: Partial<Product>) => {
     setProducts((prev) =>
       prev.map((item) => (item.id === id ? { ...item, ...updated } : item))
     );
     showToast(`Product updated successfully!`);
+
+    try {
+      await fetch('/api/products', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+        body: JSON.stringify({ id, ...updated }),
+      });
+    } catch (err) {
+      console.warn('Could not update product in DB:', err);
+    }
   };
 
-  const deleteProduct = (id: string) => {
+  const deleteProduct = async (id: string) => {
     setProducts((prev) => prev.filter((item) => item.id !== id));
     showToast(`Product removed from catalog.`);
+
+    try {
+      await fetch(`/api/products?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+      });
+    } catch (err) {
+      console.warn('Could not delete product from DB:', err);
+    }
   };
 
   const updateStock = async (id: string, inStock: boolean, stockCount?: number) => {
@@ -991,41 +1052,101 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Admin Category & Brand Actions
-  const addCategory = (cat: Omit<CategoryDetail, 'id' | 'itemCount'>) => {
+  const addCategory = async (cat: Omit<CategoryDetail, 'id' | 'itemCount'>) => {
+    const tempId = `CAT-${Date.now().toString().slice(-4)}`;
     const newCat: CategoryDetail = {
       ...cat,
-      id: `CAT-${Date.now().toString().slice(-4)}`,
+      id: tempId,
       itemCount: 0,
     };
     setCategories((prev) => [newCat, ...prev]);
     showToast(`Category "${cat.name}" added successfully!`);
+
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cat),
+      });
+      const data = await res.json();
+      if (data.success && data.category) {
+        setCategories((prev) =>
+          prev.map((c) => (c.id === tempId ? { ...c, ...data.category } : c))
+        );
+      }
+    } catch (err) {
+      console.warn('Could not post category to API:', err);
+    }
   };
 
-  const updateCategory = (id: string, cat: Partial<CategoryDetail>) => {
+  const updateCategory = async (id: string, cat: Partial<CategoryDetail>) => {
     setCategories((prev) =>
       prev.map((c) => (c.id === id ? { ...c, ...cat } : c))
     );
     showToast(`Category updated.`);
+
+    try {
+      await fetch('/api/categories', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ...cat }),
+      });
+    } catch (err) {
+      console.warn('Could not update category in DB:', err);
+    }
   };
 
-  const deleteCategory = (id: string) => {
+  const deleteCategory = async (id: string) => {
     setCategories((prev) => prev.filter((c) => c.id !== id));
     showToast(`Category deleted.`);
+
+    try {
+      await fetch(`/api/categories?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+    } catch (err) {
+      console.warn('Could not delete category from DB:', err);
+    }
   };
 
-  const addBrand = (brand: Omit<BrandItem, 'id' | 'itemCount'>) => {
+  const addBrand = async (brand: Omit<BrandItem, 'id' | 'itemCount'>) => {
+    const tempId = `BR-${Date.now().toString().slice(-4)}`;
     const newBrand: BrandItem = {
       ...brand,
-      id: `BR-${Date.now().toString().slice(-4)}`,
+      id: tempId,
       itemCount: 0,
     };
     setBrands((prev) => [newBrand, ...prev]);
     showToast(`Brand "${brand.name}" added.`);
+
+    try {
+      const res = await fetch('/api/brands', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(brand),
+      });
+      const data = await res.json();
+      if (data.success && data.brand) {
+        setBrands((prev) =>
+          prev.map((b) => (b.id === tempId ? { ...b, ...data.brand } : b))
+        );
+      }
+    } catch (err) {
+      console.warn('Could not post brand to API:', err);
+    }
   };
 
-  const deleteBrand = (id: string) => {
+  const deleteBrand = async (id: string) => {
     setBrands((prev) => prev.filter((b) => b.id !== id));
     showToast(`Brand deleted.`);
+
+    try {
+      await fetch(`/api/brands?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+    } catch (err) {
+      console.warn('Could not delete brand from DB:', err);
+    }
   };
 
   // Admin Coupons
@@ -1091,24 +1212,52 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Admin Reviews
-  const approveReview = (id: string) => {
+  // Admin Reviews with DB sync
+  const approveReview = async (id: string) => {
     setReviews((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: 'approved' } : r))
     );
     showToast(`Review approved and published!`);
+
+    try {
+      await fetch('/api/reviews', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: 'approved' }),
+      });
+    } catch (err) {
+      console.warn('Could not approve review in DB:', err);
+    }
   };
 
-  const rejectReview = (id: string) => {
+  const rejectReview = async (id: string) => {
     setReviews((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: 'rejected' } : r))
     );
     showToast(`Review rejected.`);
+
+    try {
+      await fetch('/api/reviews', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: 'rejected' }),
+      });
+    } catch (err) {
+      console.warn('Could not reject review in DB:', err);
+    }
   };
 
-  const deleteReview = (id: string) => {
+  const deleteReview = async (id: string) => {
     setReviews((prev) => prev.filter((r) => r.id !== id));
     showToast(`Review removed.`);
+
+    try {
+      await fetch(`/api/reviews?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+    } catch (err) {
+      console.warn('Could not delete review from DB:', err);
+    }
   };
 
   // Admin Banners & Marquee

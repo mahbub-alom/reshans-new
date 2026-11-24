@@ -119,9 +119,10 @@ model Category {
   id          String    @id @default(uuid())
   name        String
   slug        String    @unique
-  image       String    @db.Text
+  page        String    @default("Shop") // Shop, Men, Women, Collections
+  image       String?   @db.Text
   description String?   @db.Text
-  status      String    @default("Active") // Active, Hidden
+  status      String    @default("Active") // Active, Inactive
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -162,6 +163,7 @@ model Product {
   isBestSeller  Boolean     @default(false)
   tabCategory   String?     // new, featured, top_sellers
   department    String?     @default("men") // men, women, kids, all
+  page          String?     @default("Shop") // Shop, Men, Women, Collections
   sizes         String      @default("S,M,L,XL") // comma-separated sizes
   colors        String      @default("Forest Green:#093624,Butter Cream:#F9F295") // JSON or key:hex string
 

@@ -22,7 +22,10 @@ export interface Product {
   isBestSeller?: boolean;
   tabCategory?: 'new' | 'featured' | 'top_sellers';
   department?: 'all' | 'men' | 'women' | 'kids';
+  page?: 'Shop' | 'Men' | 'Women' | 'Collections' | string;
+  categoryId?: string;
   brand?: string;
+  brandId?: string;
   sku?: string;
 }
 
@@ -104,10 +107,11 @@ export interface CategoryDetail {
   id: string;
   name: string;
   slug: string;
+  page?: 'Shop' | 'Men' | 'Women' | 'Collections' | string;
   itemCount: number;
-  image: string;
-  description: string;
-  status: 'Active' | 'Hidden';
+  image?: string;
+  description?: string;
+  status: 'Active' | 'Inactive' | 'Hidden';
 }
 
 export interface BrandItem {

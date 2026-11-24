@@ -29,6 +29,7 @@ export const MenPage: React.FC = () => {
       pageTitle="Men's Collection"
       pageSubtitle="Refined silhouettes, structured overshirts, tailored trousers, and everyday organic cotton crews engineered for discerning gentlemen."
       breadcrumbLabel="Men"
+      pageType="Men"
       departmentFilter="men"
       categoryCircles={MEN_CATEGORY_CIRCLES}
       categoryOptions={MEN_SUBCATEGORIES}

@@ -36,6 +36,7 @@ export const CollectionsPage: React.FC = () => {
       pageTitle="Curated Collections"
       pageSubtitle="Distinct thematic capsule collections thoughtfully designed for Summer, Winter, Casual Weekends, Premium Occasions, and Modern Office Wear."
       breadcrumbLabel="Collections"
+      pageType="Collections"
       isCollectionsOnly={true}
       collectionPresets={CURATED_PRESETS}
       categoryCircles={COLLECTIONS_CIRCLES}

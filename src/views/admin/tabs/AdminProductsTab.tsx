@@ -1,33 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Plus,
   Search,
-  Filter,
   Edit,
   Trash2,
-  ExternalLink,
-  Check,
-  X,
   AlertCircle,
   Image as ImageIcon,
-  CheckCircle,
+  Upload,
+  Loader2,
 } from 'lucide-react';
 import { Product } from '../../../types';
 import { useShop } from '../../../context/ShopContext';
-import { Button } from '../../../components/common/Button';
 
-const PRESET_IMAGES = [
-  '/assets/img/fashion-1/product/product-1/front-img-1.jpg',
-  '/assets/img/fashion-1/product/product-2/front-img-1.jpg',
-  '/assets/img/fashion-1/product/product-3/front-img-1.jpg',
-  '/assets/img/fashion-1/product/product-4/front-img-1.jpg',
-  '/assets/img/fashion-1/product/product-5/front-img-1.jpg',
-  '/assets/img/fashion-1/product/product-6/front-img-1.jpg',
-  '/assets/img/fashion-1/product/product-7/front-img-1.jpg',
-  '/assets/img/fashion-1/product/product-8/front-img-1.jpg',
-];
+const PAGE_OPTIONS = ['Shop', 'Men', 'Women', 'Collections'] as const;
 
 export const AdminProductsTab: React.FC = () => {
   const {
@@ -38,11 +25,12 @@ export const AdminProductsTab: React.FC = () => {
     categories,
     brands,
     formatPrice,
-    navigate,
+    showToast,
   } = useShop();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedPageFilter, setSelectedPageFilter] = useState('all');
   const [stockFilter, setStockFilter] = useState<'all' | 'in_stock' | 'out_of_stock'>('all');
 
   // Modal states
@@ -50,17 +38,23 @@ export const AdminProductsTab: React.FC = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
+  // Cloudinary upload state
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Form State
   const initialForm = {
     name: '',
-    category: categories[0]?.name || 'Men Collection',
+    page: 'Shop' as 'Shop' | 'Men' | 'Women' | 'Collections',
+    category: '',
+    categoryId: '',
     brand: brands[0]?.name || 'Reshans Atelier',
     price: 3500,
     originalPrice: 4200,
     discount: '-15%',
     badge: 'new' as 'new' | 'hot' | 'sale' | undefined,
-    frontImage: PRESET_IMAGES[0],
-    backImage: PRESET_IMAGES[1],
+    frontImage: '',
+    backImage: '',
     description: 'Artisanal garment handcrafted from premium organic fibers tailored for modern elegance.',
     sizes: ['S', 'M', 'L', 'XL'],
     inStock: true,
@@ -72,17 +66,35 @@ export const AdminProductsTab: React.FC = () => {
 
   const [formData, setFormData] = useState(initialForm);
 
+  // Active categories filtered by currently selected page in form
+  const pageCategories = categories.filter(
+    (c) => (c.page || 'Shop').toLowerCase() === formData.page.toLowerCase()
+  );
+
   const handleOpenAdd = () => {
     setEditingProduct(null);
-    setFormData(initialForm);
+    const initialPage = 'Shop';
+    const firstCat = categories.find((c) => (c.page || 'Shop') === initialPage);
+    setFormData({
+      ...initialForm,
+      page: initialPage,
+      category: firstCat?.name || '',
+      categoryId: firstCat?.id || '',
+    });
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (prod: Product) => {
     setEditingProduct(prod);
+    const prodPage = (prod.page as any) || 'Shop';
+    const prodCategory = prod.category;
+    const matchedCat = categories.find((c) => c.name === prodCategory || c.id === prod.categoryId);
+
     setFormData({
       name: prod.name,
-      category: prod.category,
+      page: prodPage,
+      category: matchedCat?.name || prod.category || '',
+      categoryId: matchedCat?.id || prod.categoryId || '',
       brand: prod.brand || brands[0]?.name || 'Reshans Atelier',
       price: prod.price,
       originalPrice: prod.originalPrice || prod.price,
@@ -91,7 +103,7 @@ export const AdminProductsTab: React.FC = () => {
       frontImage: prod.frontImage,
       backImage: prod.backImage || prod.frontImage,
       description: prod.description,
-      sizes: prod.sizes,
+      sizes: prod.sizes || ['S', 'M', 'L', 'XL'],
       inStock: prod.inStock,
       stockCount: prod.stockCount !== undefined ? prod.stockCount : 25,
       isTrending: !!prod.isTrending,
@@ -101,21 +113,107 @@ export const AdminProductsTab: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  // Handle Page Change in Product Form
+  const handlePageChange = (newPage: 'Shop' | 'Men' | 'Women' | 'Collections') => {
+    // When the selected page changes, reset the previously selected category and load the relevant categories
+    const relevantCats = categories.filter(
+      (c) => (c.page || 'Shop').toLowerCase() === newPage.toLowerCase()
+    );
+    const firstCat = relevantCats[0];
+    setFormData((prev) => ({
+      ...prev,
+      page: newPage,
+      category: firstCat ? firstCat.name : '',
+      categoryId: firstCat ? firstCat.id : '',
+    }));
+  };
+
+  // Handle Category Change in Product Form
+  const handleCategoryChange = (catName: string) => {
+    const matched = categories.find(
+      (c) => c.name === catName && (c.page || 'Shop').toLowerCase() === formData.page.toLowerCase()
+    );
+    setFormData((prev) => ({
+      ...prev,
+      category: catName,
+      categoryId: matched?.id || '',
+    }));
+  };
+
+  // Handle Cloudinary Image Upload
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('Please select a valid image file');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const uploadData = new FormData();
+      uploadData.append('file', file);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: uploadData,
+      });
+
+      const data = await res.json();
+      if (data.success && data.url) {
+        setFormData((prev) => ({
+          ...prev,
+          frontImage: data.url,
+          backImage: prev.backImage || data.url,
+        }));
+        showToast('Product image uploaded to Cloudinary!');
+      } else {
+        showToast(data.error || 'Failed to upload image');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Image upload error');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const handleSaveProduct = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim()) return;
+    if (!formData.name.trim()) {
+      showToast('Product name is required');
+      return;
+    }
+
+    if (!formData.page) {
+      showToast('Please select a page placement');
+      return;
+    }
+
+    if (!formData.category) {
+      showToast(`Please select a category for page ${formData.page}`);
+      return;
+    }
+
+    if (!formData.frontImage) {
+      showToast('Product image is required (upload to Cloudinary)');
+      return;
+    }
 
     if (editingProduct) {
       updateProduct(editingProduct.id, {
         name: formData.name,
+        page: formData.page,
         category: formData.category,
+        categoryId: formData.categoryId,
         brand: formData.brand,
         price: Number(formData.price),
         originalPrice: formData.originalPrice ? Number(formData.originalPrice) : undefined,
         discount: formData.discount || undefined,
         badge: formData.badge,
         frontImage: formData.frontImage,
-        backImage: formData.backImage,
+        backImage: formData.backImage || formData.frontImage,
         description: formData.description,
         sizes: formData.sizes,
         inStock: formData.inStock,
@@ -123,11 +221,14 @@ export const AdminProductsTab: React.FC = () => {
         isTrending: formData.isTrending,
         isBestSeller: formData.isBestSeller,
         isNewArrival: formData.isNewArrival,
+        department: formData.page === 'Men' ? 'men' : formData.page === 'Women' ? 'women' : 'all',
       });
     } else {
       addProduct({
         name: formData.name,
+        page: formData.page,
         category: formData.category,
+        categoryId: formData.categoryId,
         brand: formData.brand,
         price: Number(formData.price),
         originalPrice: formData.originalPrice ? Number(formData.originalPrice) : undefined,
@@ -136,7 +237,7 @@ export const AdminProductsTab: React.FC = () => {
         rating: 5,
         reviewsCount: 1,
         frontImage: formData.frontImage,
-        backImage: formData.backImage,
+        backImage: formData.backImage || formData.frontImage,
         description: formData.description,
         sizes: formData.sizes,
         colors: [
@@ -148,7 +249,7 @@ export const AdminProductsTab: React.FC = () => {
         isTrending: formData.isTrending,
         isBestSeller: formData.isBestSeller,
         isNewArrival: formData.isNewArrival,
-        department: 'men',
+        department: formData.page === 'Men' ? 'men' : formData.page === 'Women' ? 'women' : 'all',
       });
     }
 
@@ -162,6 +263,10 @@ export const AdminProductsTab: React.FC = () => {
       p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase()));
 
+    const matchesPage =
+      selectedPageFilter === 'all' ||
+      (p.page || 'Shop').toLowerCase() === selectedPageFilter.toLowerCase();
+
     const matchesCat = selectedCategory === 'all' || p.category === selectedCategory;
 
     const matchesStock =
@@ -169,7 +274,7 @@ export const AdminProductsTab: React.FC = () => {
       (stockFilter === 'in_stock' && p.inStock) ||
       (stockFilter === 'out_of_stock' && !p.inStock);
 
-    return matchesSearch && matchesCat && matchesStock;
+    return matchesSearch && matchesPage && matchesCat && matchesStock;
   });
 
   const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
@@ -201,6 +306,20 @@ export const AdminProductsTab: React.FC = () => {
 
         {/* Dropdowns & CTA */}
         <div className="flex flex-wrap items-center gap-3">
+          {/* Page Filter */}
+          <select
+            value={selectedPageFilter}
+            onChange={(e) => setSelectedPageFilter(e.target.value)}
+            className="px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] text-xs font-satoshi-med rounded-xs text-[#141414] focus:outline-none focus:border-[#093624]"
+          >
+            <option value="all">All Pages</option>
+            {PAGE_OPTIONS.map((pg) => (
+              <option key={pg} value={pg}>
+                {pg} Page
+              </option>
+            ))}
+          </select>
+
           {/* Category Filter */}
           <select
             value={selectedCategory}
@@ -210,7 +329,7 @@ export const AdminProductsTab: React.FC = () => {
             <option value="all">All Categories</option>
             {categories.map((c) => (
               <option key={c.id} value={c.name}>
-                {c.name}
+                {c.name} ({c.page || 'Shop'})
               </option>
             ))}
           </select>
@@ -253,10 +372,10 @@ export const AdminProductsTab: React.FC = () => {
             <thead className="bg-[#F9F9F9] text-brand-body uppercase font-satoshi-bold text-[10px] tracking-wider border-b border-[#EBEBEB]">
               <tr>
                 <th className="py-3 px-4">Product Details</th>
-                <th className="py-3 px-4">Category & Brand</th>
+                <th className="py-3 px-4">Placement (Page / Category)</th>
+                <th className="py-3 px-4">Brand</th>
                 <th className="py-3 px-4">Price (BDT ৳)</th>
                 <th className="py-3 px-4">Stock Units</th>
-                <th className="py-3 px-4">Badges & Flags</th>
                 <th className="py-3 px-4 text-center">Actions</th>
               </tr>
             </thead>
@@ -267,11 +386,17 @@ export const AdminProductsTab: React.FC = () => {
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-14 bg-gray-100 rounded-xs overflow-hidden shrink-0 border border-gray-100">
-                        <img
-                          src={p.frontImage}
-                          alt={p.name}
-                          className="w-full h-full object-cover"
-                        />
+                        {p.frontImage ? (
+                          <img
+                            src={p.frontImage}
+                            alt={p.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            <ImageIcon size={18} />
+                          </div>
+                        )}
                       </div>
                       <div className="min-w-0">
                         <h4 className="font-satoshi-bold text-[#141414] truncate max-w-[200px]">
@@ -280,18 +405,25 @@ export const AdminProductsTab: React.FC = () => {
                         <span className="text-[10px] text-gray-400 font-mono block">
                           SKU: {p.sku || p.id}
                         </span>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <span className="text-[10px] text-[#093624]">★ {p.rating}</span>
-                          <span className="text-[10px] text-gray-400">({p.reviewsCount})</span>
-                        </div>
                       </div>
                     </div>
                   </td>
 
-                  {/* Category & Brand */}
+                  {/* Placement (Page / Category) */}
                   <td className="py-3 px-4">
-                    <div className="font-satoshi-med text-[#141414]">{p.category}</div>
-                    <div className="text-[10px] text-gray-400">{p.brand || 'Reshans Fashion'}</div>
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="px-1.5 py-0.5 bg-[#093624] text-[#F9F295] font-satoshi-bold text-[10px] rounded-xs uppercase">
+                        {p.page || 'Shop'}
+                      </span>
+                      <span className="font-satoshi-bold text-[#141414] text-xs">
+                        {p.category}
+                      </span>
+                    </div>
+                  </td>
+
+                  {/* Brand */}
+                  <td className="py-3 px-4">
+                    <div className="text-gray-700 font-satoshi">{p.brand || 'Reshans Atelier'}</div>
                   </td>
 
                   {/* Price */}
@@ -300,7 +432,7 @@ export const AdminProductsTab: React.FC = () => {
                       {formatPrice(p.price)}
                     </div>
                     {p.originalPrice && p.originalPrice > p.price && (
-                      <div className="text-[10px] text-gray-400 line-through tabular-nums">
+                      <div className="text-[10px] text-gray-400 line-through">
                         {formatPrice(p.originalPrice)}
                       </div>
                     )}
@@ -309,58 +441,30 @@ export const AdminProductsTab: React.FC = () => {
                   {/* Stock Units */}
                   <td className="py-3 px-4">
                     <span
-                      className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-satoshi-bold ${
+                      className={`inline-block px-2 py-0.5 text-[10px] font-satoshi-bold rounded-xs ${
                         p.inStock
-                          ? 'bg-[#093624] text-[#F9F295]'
-                          : 'bg-[#F1EFEE] text-[#6D6868]'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
                       }`}
                     >
-                      {p.inStock ? `${p.stockCount ?? 20} in stock` : 'Out of Stock'}
+                      {p.inStock ? `${p.stockCount ?? 20} in stock` : 'Out of stock'}
                     </span>
-                  </td>
-
-                  {/* Badges & Flags */}
-                  <td className="py-3 px-4">
-                    <div className="flex flex-wrap gap-1">
-                      {p.badge && (
-                        <span className="px-1.5 py-0.5 bg-[#093624] text-[#F9F295] rounded-xs text-[9px] font-satoshi-bold uppercase">
-                          {p.badge}
-                        </span>
-                      )}
-                      {p.isTrending && (
-                        <span className="px-1.5 py-0.5 bg-[#F9F295] text-[#093624] rounded-xs text-[9px] font-satoshi-bold">
-                          Trending
-                        </span>
-                      )}
-                      {p.isBestSeller && (
-                        <span className="px-1.5 py-0.5 bg-[#093624]/10 text-[#093624] rounded-xs text-[9px] font-satoshi-bold">
-                          Bestseller
-                        </span>
-                      )}
-                    </div>
                   </td>
 
                   {/* Actions */}
                   <td className="py-3 px-4 text-center">
-                    <div className="flex items-center justify-center gap-1.5">
-                      <button
-                        onClick={() => navigate(`/product/${p.id}`)}
-                        className="p-1.5 text-gray-400 hover:text-[#093624] hover:bg-gray-100 rounded-xs transition-colors cursor-pointer"
-                        title="View on store"
-                      >
-                        <ExternalLink size={14} />
-                      </button>
+                    <div className="flex items-center justify-center gap-2">
                       <button
                         onClick={() => handleOpenEdit(p)}
-                        className="p-1.5 text-gray-600 hover:text-[#093624] hover:bg-gray-100 rounded-xs transition-colors cursor-pointer"
-                        title="Edit product"
+                        className="p-1 text-gray-500 hover:text-[#093624] cursor-pointer"
+                        title="Edit Product"
                       >
                         <Edit size={14} />
                       </button>
                       <button
                         onClick={() => setDeleteConfirmId(p.id)}
-                        className="p-1.5 text-gray-400 hover:text-[#141414] hover:bg-[#F1EFEE] rounded-xs transition-colors cursor-pointer"
-                        title="Delete product"
+                        className="p-1 text-gray-400 hover:text-red-600 cursor-pointer"
+                        title="Delete Product"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -373,10 +477,10 @@ export const AdminProductsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Add / Edit Product Modal */}
+      {/* 3. Product Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-white rounded-xs border border-[#EBEBEB] shadow-2xl max-w-2xl w-full my-8 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-white rounded-xs border border-[#EBEBEB] shadow-2xl max-w-2xl w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
             <div className="p-5 border-b border-[#EBEBEB] flex items-center justify-between bg-[#093624] text-white">
               <h3 className="text-base font-bold font-satoshi-bold">
@@ -384,9 +488,10 @@ export const AdminProductsTab: React.FC = () => {
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-1 text-white/70 hover:text-white rounded-xs hover:bg-white/10"
+                className="p-1 text-white/70 hover:text-white rounded-xs hover:bg-white/10 cursor-pointer"
               >
-                <X size={18} />
+                <AlertCircle size={18} className="hidden" />
+                <span>✕</span>
               </button>
             </div>
 
@@ -407,41 +512,22 @@ export const AdminProductsTab: React.FC = () => {
                 />
               </div>
 
-              {/* Category & Brand row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-satoshi-bold uppercase tracking-wider text-brand-body mb-1">
-                    Category
-                  </label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs text-xs font-satoshi focus:outline-none focus:border-[#093624]"
-                  >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.name}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-satoshi-bold uppercase tracking-wider text-brand-body mb-1">
-                    Brand
-                  </label>
-                  <select
-                    value={formData.brand}
-                    onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs text-xs font-satoshi focus:outline-none focus:border-[#093624]"
-                  >
-                    {brands.map((b) => (
-                      <option key={b.id} value={b.name}>
-                        {b.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {/* Brand selection */}
+              <div>
+                <label className="block text-xs font-satoshi-bold uppercase tracking-wider text-brand-body mb-1">
+                  Brand / Label
+                </label>
+                <select
+                  value={formData.brand}
+                  onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                  className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs text-xs font-satoshi focus:outline-none focus:border-[#093624]"
+                >
+                  {brands.map((b) => (
+                    <option key={b.id} value={b.name}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Pricing in BDT */}
@@ -495,38 +581,61 @@ export const AdminProductsTab: React.FC = () => {
                 </div>
               </div>
 
-              {/* Image URL selection */}
+              {/* Cloudinary Image Upload */}
               <div>
                 <label className="block text-xs font-satoshi-bold uppercase tracking-wider text-brand-body mb-1">
-                  Product Image URL *
+                  Product Image * (Upload to Cloudinary)
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.frontImage}
-                  onChange={(e) => setFormData({ ...formData, frontImage: e.target.value })}
-                  className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs text-xs font-satoshi focus:outline-none focus:border-[#093624] mb-2"
-                />
-
-                <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                  <span className="text-[11px] text-gray-500 whitespace-nowrap">
-                    Or select asset:
-                  </span>
-                  {PRESET_IMAGES.map((img, i) => (
-                    <button
-                      type="button"
-                      key={i}
-                      onClick={() => setFormData({ ...formData, frontImage: img })}
-                      className={`w-10 h-12 border rounded-xs overflow-hidden shrink-0 transition-all ${
-                        formData.frontImage === img
-                          ? 'border-[#093624] ring-2 ring-[#093624]'
-                          : 'border-gray-200 opacity-60 hover:opacity-100'
-                      }`}
-                    >
-                      <img src={img} alt="preset" className="w-full h-full object-cover" />
-                    </button>
-                  ))}
+                <div className="flex items-center gap-3 mb-2">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    id="prod-image-file"
+                  />
+                  <label
+                    htmlFor="prod-image-file"
+                    className={`px-4 py-2 bg-[#093624] text-[#F9F295] text-xs font-satoshi-bold uppercase tracking-wider rounded-xs cursor-pointer flex items-center gap-2 hover:opacity-90 ${
+                      isUploading ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" />
+                        <span>Uploading to Cloudinary...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={14} />
+                        <span>Upload Image to Cloudinary</span>
+                      </>
+                    )}
+                  </label>
                 </div>
+
+                {formData.frontImage ? (
+                  <div className="flex items-center gap-3 p-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs">
+                    <img
+                      src={formData.frontImage}
+                      alt="Front preview"
+                      className="w-14 h-16 object-cover rounded-xs border border-gray-200"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] text-gray-500 font-mono truncate">
+                        {formData.frontImage}
+                      </p>
+                      <span className="text-[10px] text-[#093624] font-satoshi-bold">
+                        Cloudinary Hosted Image
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-amber-700 bg-amber-50 p-2 border border-amber-200 rounded-xs">
+                    Please upload an image for this product. Static or local images are disabled.
+                  </p>
+                )}
               </div>
 
               {/* Sizes Available */}
@@ -592,40 +701,75 @@ export const AdminProductsTab: React.FC = () => {
                 </div>
               </div>
 
-              {/* Trending / Bestseller flags */}
-              <div className="flex flex-wrap gap-5 pt-2">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-satoshi text-[#141414]">
-                  <input
-                    type="checkbox"
-                    checked={formData.isTrending}
-                    onChange={(e) => setFormData({ ...formData, isTrending: e.target.checked })}
-                    className="accent-[#093624] w-4 h-4 rounded-xs"
-                  />
-                  <span>Mark as Trending</span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-satoshi text-[#141414]">
-                  <input
-                    type="checkbox"
-                    checked={formData.isBestSeller}
-                    onChange={(e) => setFormData({ ...formData, isBestSeller: e.target.checked })}
-                    className="accent-[#093624] w-4 h-4 rounded-xs"
-                  />
-                  <span>Mark as Best Seller</span>
-                </label>
-              </div>
-
-              {/* Description */}
+              {/* Product Description */}
               <div>
                 <label className="block text-xs font-satoshi-bold uppercase tracking-wider text-brand-body mb-1">
                   Product Description
                 </label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs text-xs font-satoshi focus:outline-none focus:border-[#093624]"
                 />
+              </div>
+
+              {/* ============================================================== */}
+              {/* NEW SECTION: Product Placement (Two dropdowns: Page & Category) */}
+              {/* ============================================================== */}
+              <div className="p-4 bg-emerald-50/60 border border-emerald-200 rounded-xs space-y-3">
+                <div className="border-b border-emerald-200 pb-2">
+                  <h4 className="text-xs font-satoshi-bold uppercase tracking-wider text-[#093624]">
+                    Product Placement
+                  </h4>
+                  <p className="text-[11px] text-gray-600 font-satoshi">
+                    Assign which storefront page and page category this product displays under.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* First dropdown: Select Page */}
+                  <div>
+                    <label className="block text-xs font-satoshi-bold uppercase tracking-wider text-brand-body mb-1">
+                      Select Page *
+                    </label>
+                    <select
+                      required
+                      value={formData.page}
+                      onChange={(e) => handlePageChange(e.target.value as any)}
+                      className="w-full px-3 py-2 bg-white border border-[#EBEBEB] rounded-xs text-xs font-satoshi focus:outline-none focus:border-[#093624]"
+                    >
+                      {PAGE_OPTIONS.map((pg) => (
+                        <option key={pg} value={pg}>
+                          {pg}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Second dropdown: Select Category */}
+                  <div>
+                    <label className="block text-xs font-satoshi-bold uppercase tracking-wider text-brand-body mb-1">
+                      Select Category *
+                    </label>
+                    <select
+                      required
+                      value={formData.category}
+                      onChange={(e) => handleCategoryChange(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-[#EBEBEB] rounded-xs text-xs font-satoshi focus:outline-none focus:border-[#093624]"
+                    >
+                      {pageCategories.length === 0 ? (
+                        <option value="">No categories found for {formData.page}</option>
+                      ) : (
+                        pageCategories.map((c) => (
+                          <option key={c.id} value={c.name}>
+                            {c.name}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+                </div>
               </div>
 
               {/* Modal Actions */}
@@ -639,7 +783,8 @@ export const AdminProductsTab: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-[#093624] hover:opacity-90 text-[#F9F295] text-xs font-satoshi-bold uppercase tracking-wider rounded-xs transition-opacity cursor-pointer shadow-xs"
+                  disabled={isUploading}
+                  className="px-6 py-2 bg-[#093624] hover:opacity-90 text-[#F9F295] text-xs font-satoshi-bold uppercase tracking-wider rounded-xs transition-opacity cursor-pointer shadow-xs disabled:opacity-50"
                 >
                   {editingProduct ? 'Save Changes' : 'Create Product'}
                 </button>

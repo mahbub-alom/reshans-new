@@ -33,7 +33,7 @@ const COLOR_OPTIONS = [
 const SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
 export const ShopPage: React.FC = () => {
-  const { products, navigate, formatPrice, activeCategoryFilter, setActiveCategoryFilter } = useShop();
+  const { products, categories, navigate, formatPrice, activeCategoryFilter, setActiveCategoryFilter } = useShop();
 
   // Active filter states
   const [selectedCategory, setSelectedCategory] = useState<string>(activeCategoryFilter || 'all');
@@ -46,6 +46,35 @@ export const ShopPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage = 8;
 
+  // Dynamic Shop Page categories (all active categories across the store so customer can browse anything in Shop)
+  const shopCategories = useMemo(() => {
+    // Return all active categories deduplicated by name
+    const active = categories.filter((c) => c.status === 'Active');
+    const seen = new Set<string>();
+    return active.filter((c) => {
+      const lower = c.name.toLowerCase();
+      if (seen.has(lower)) return false;
+      seen.add(lower);
+      return true;
+    });
+  }, [categories]);
+
+  // Dynamic Category Circles for Shop page showing all categories
+  const categoryCircles = useMemo(() => {
+    if (shopCategories.length > 0) {
+      return [
+        { id: 'shop-all', label: 'All Shop', image: '/assets/img/fashion-1/categories/category-16.jpg', filterKey: 'all' },
+        ...shopCategories.map((c) => ({
+          id: c.id,
+          label: c.name,
+          image: c.image || '/assets/img/fashion-1/categories/category-13.jpg',
+          filterKey: c.name,
+        })),
+      ];
+    }
+    return CATEGORY_CIRCLES;
+  }, [shopCategories]);
+
   // Sync when activeCategoryFilter changes
   useEffect(() => {
     if (activeCategoryFilter) {
@@ -57,6 +86,36 @@ export const ShopPage: React.FC = () => {
   // Active opened dropdown
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Category circles mouse drag-to-scroll state
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const isDragMoved = useRef(false);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!sliderRef.current) return;
+    setIsDragging(true);
+    isDragMoved.current = false;
+    setStartX(e.pageX - sliderRef.current.offsetLeft);
+    setScrollLeft(sliderRef.current.scrollLeft);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !sliderRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - sliderRef.current.offsetLeft;
+    const walk = (x - startX) * 1.5; // drag speed multiplier
+    if (Math.abs(walk) > 5) {
+      isDragMoved.current = true;
+    }
+    sliderRef.current.scrollLeft = scrollLeft - walk;
+  };
+
+  const handleMouseUpOrLeave = () => {
+    setIsDragging(false);
+  };
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -124,7 +183,13 @@ export const ShopPage: React.FC = () => {
 
   // Filter & Sort Products
   const filteredProducts = useMemo(() => {
-    let result = [...(products && products.length ? products : PRODUCTS)];
+    // In Shop page, display all products across all categories & pages without duplicates
+    const seenIds = new Set<string>();
+    let result = (products && products.length ? products : PRODUCTS).filter((p) => {
+      if (seenIds.has(p.id)) return false;
+      seenIds.add(p.id);
+      return true;
+    });
 
     // Search query filter
     if (searchQuery.trim()) {
@@ -236,20 +301,38 @@ export const ShopPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 2. Categories Circular Area (Slider/Row) - Exact Aqlova Style */}
-      <section className="pt-12 pb-6 border-b border-gray-100">
+      {/* 2. Categories Circular Area (Slider/Row) - Exact Aqlova Style with Drag-to-Scroll */}
+      <section className="pt-12 pb-6 border-b border-gray-100 select-none">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-start sm:justify-between gap-6 overflow-x-auto pb-4 no-scrollbar">
-            {CATEGORY_CIRCLES.map((cat) => {
+          <div
+            ref={sliderRef}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUpOrLeave}
+            onMouseLeave={handleMouseUpOrLeave}
+            className={`flex items-center gap-6 sm:gap-8 overflow-x-auto pb-4 no-scrollbar cursor-grab active:cursor-grabbing ${
+              isDragging ? 'cursor-grabbing select-none' : ''
+            }`}
+            style={{
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+              WebkitOverflowScrolling: 'touch',
+            }}
+          >
+            {categoryCircles.map((cat) => {
               const isSelected = selectedCategory === cat.filterKey;
               return (
                 <button
                   key={cat.id}
-                  onClick={() => handleCategoryCircleClick(cat.filterKey)}
+                  onClick={() => {
+                    if (!isDragMoved.current) {
+                      handleCategoryCircleClick(cat.filterKey);
+                    }
+                  }}
                   className="flex flex-col items-center flex-shrink-0 group cursor-pointer focus:outline-hidden"
                 >
                   <div
-                    className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden p-1 transition-all duration-300 ${
+                    className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden p-1 transition-all duration-300 pointer-events-none ${
                       isSelected
                         ? 'ring-2 ring-[#093624] scale-105'
                         : 'border border-gray-200 group-hover:border-[#093624] group-hover:scale-105'
@@ -258,7 +341,8 @@ export const ShopPage: React.FC = () => {
                     <img
                       src={cat.image}
                       alt={cat.label}
-                      className="w-full h-full object-cover rounded-full transition-transform duration-500 group-hover:scale-110"
+                      draggable={false}
+                      className="w-full h-full object-cover rounded-full transition-transform duration-500 group-hover:scale-110 pointer-events-none select-none"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src =
                           '/assets/img/fashion-2/category/cat-1.jpg';
@@ -266,7 +350,7 @@ export const ShopPage: React.FC = () => {
                     />
                   </div>
                   <span
-                    className={`mt-2.5 text-xs sm:text-sm font-satoshi-med transition-colors ${
+                    className={`mt-2.5 text-xs sm:text-sm font-satoshi-med transition-colors pointer-events-none ${
                       isSelected ? 'text-[#093624] font-bold' : 'text-[#141414] group-hover:text-[#093624]'
                     }`}
                   >
@@ -312,16 +396,23 @@ export const ShopPage: React.FC = () => {
                     Category
                   </h4>
                   <ul className="space-y-1.5 text-xs font-satoshi-med text-[#141414]">
-                    {[
-                      { key: 'all', label: 'All Categories' },
-                      { key: 'Tops', label: 'Tops (14)' },
-                      { key: 'Blazers', label: 'Blazers (3)' },
-                      { key: 'T-Shirts', label: 'T-Shirts (2)' },
-                      { key: 'Dress', label: 'Dress (6)' },
-                      { key: 'Sweaters', label: 'Sweaters (4)' },
-                      { key: 'Knitwear', label: 'Knitwear (5)' },
-                      { key: 'Men Collection', label: 'Men Collection (8)' },
-                    ].map((item) => (
+                    {(
+                      shopCategories.length > 0
+                        ? [
+                            { key: 'all', label: 'All Categories' },
+                            ...shopCategories.map((c) => ({ key: c.name, label: c.name })),
+                          ]
+                        : [
+                            { key: 'all', label: 'All Categories' },
+                            { key: 'Tops', label: 'Tops (14)' },
+                            { key: 'Blazers', label: 'Blazers (3)' },
+                            { key: 'T-Shirts', label: 'T-Shirts (2)' },
+                            { key: 'Dress', label: 'Dress (6)' },
+                            { key: 'Sweaters', label: 'Sweaters (4)' },
+                            { key: 'Knitwear', label: 'Knitwear (5)' },
+                            { key: 'Men Collection', label: 'Men Collection (8)' },
+                          ]
+                    ).map((item) => (
                       <li key={item.key}>
                         <button
                           type="button"

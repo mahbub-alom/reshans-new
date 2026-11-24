@@ -15,6 +15,7 @@ export interface DedicatedProductCatalogProps {
   pageTitle: string;
   pageSubtitle: string;
   breadcrumbLabel: string;
+  pageType?: 'Shop' | 'Men' | 'Women' | 'Collections' | 'Sale';
   categoryCircles?: CategoryCircleItem[];
   defaultCategoryFilter?: string;
   departmentFilter?: 'all' | 'men' | 'women';
@@ -44,6 +45,7 @@ export const DedicatedProductCatalog: React.FC<DedicatedProductCatalogProps> = (
   pageTitle,
   pageSubtitle,
   breadcrumbLabel,
+  pageType,
   categoryCircles,
   defaultCategoryFilter = 'all',
   departmentFilter,
@@ -53,7 +55,47 @@ export const DedicatedProductCatalog: React.FC<DedicatedProductCatalogProps> = (
   collectionPresets,
   categoryOptions,
 }) => {
-  const { products, navigate, formatPrice } = useShop();
+  const { products, categories, navigate, formatPrice } = useShop();
+
+  // Resolved dynamic categories assigned to this page
+  const resolvedPageCategories = useMemo(() => {
+    if (!pageType) return [];
+    return categories.filter(
+      (c) => (c.page || 'Shop').toLowerCase() === pageType.toLowerCase() && c.status === 'Active'
+    );
+  }, [categories, pageType]);
+
+  // Dynamic Category Circles: If dynamic categories exist for this page, use them
+  const activeCategoryCircles: CategoryCircleItem[] = useMemo(() => {
+    if (resolvedPageCategories.length > 0) {
+      return [
+        {
+          id: `${pageType?.toLowerCase() || 'page'}-all`,
+          label: `All ${breadcrumbLabel}`,
+          image: '/assets/img/fashion-1/categories/category-16.jpg',
+          filterKey: 'all',
+        },
+        ...resolvedPageCategories.map((c) => ({
+          id: c.id,
+          label: c.name,
+          image: c.image || '/assets/img/fashion-1/categories/category-13.jpg',
+          filterKey: c.name,
+        })),
+      ];
+    }
+    return categoryCircles || [];
+  }, [resolvedPageCategories, categoryCircles, pageType, breadcrumbLabel]);
+
+  // Dynamic Subcategory dropdown options: If dynamic categories exist for this page, use them
+  const activeCategoryOptions = useMemo(() => {
+    if (resolvedPageCategories.length > 0) {
+      return [
+        { key: 'all', label: `All ${breadcrumbLabel} Categories` },
+        ...resolvedPageCategories.map((c) => ({ key: c.name, label: c.name })),
+      ];
+    }
+    return categoryOptions;
+  }, [resolvedPageCategories, categoryOptions, breadcrumbLabel]);
 
   // Active filter states
   const [selectedCategory, setSelectedCategory] = useState<string>(defaultCategoryFilter);
@@ -70,6 +112,36 @@ export const DedicatedProductCatalog: React.FC<DedicatedProductCatalogProps> = (
   // Active opened dropdown
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Category circles mouse drag-to-scroll state
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const isDragMoved = useRef(false);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!sliderRef.current) return;
+    setIsDragging(true);
+    isDragMoved.current = false;
+    setStartX(e.pageX - sliderRef.current.offsetLeft);
+    setScrollLeft(sliderRef.current.scrollLeft);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !sliderRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - sliderRef.current.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    if (Math.abs(walk) > 5) {
+      isDragMoved.current = true;
+    }
+    sliderRef.current.scrollLeft = scrollLeft - walk;
+  };
+
+  const handleMouseUpOrLeave = () => {
+    setIsDragging(false);
+  };
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -139,7 +211,32 @@ export const DedicatedProductCatalog: React.FC<DedicatedProductCatalogProps> = (
 
   // Dynamic filter products
   const filteredProducts = useMemo(() => {
-    let result = [...(products && products.length ? products : [])];
+    // Avoid duplicate products within the same listing
+    const seenIds = new Set<string>();
+    let result = (products && products.length ? products : []).filter((p) => {
+      if (seenIds.has(p.id)) return false;
+      seenIds.add(p.id);
+      return true;
+    });
+
+    // Page-specific filter: If pageType is given (e.g. Men, Women, Collections)
+    if (pageType && pageType !== 'Sale' && pageType !== 'Shop') {
+      result = result.filter((p) => {
+        if (p.page) {
+          return p.page.toLowerCase() === pageType.toLowerCase();
+        }
+        if (pageType === 'Men') {
+          return p.department === 'men' || p.category.toLowerCase().includes('men');
+        }
+        if (pageType === 'Women') {
+          return p.department === 'women' || p.category.toLowerCase().includes('women');
+        }
+        if (pageType === 'Collections') {
+          return p.category.toLowerCase().includes('workleisure') || p.category.toLowerCase().includes('collection');
+        }
+        return true;
+      });
+    }
 
     // Department constraint (Men vs Women)
     if (departmentFilter && departmentFilter !== 'all') {
@@ -317,21 +414,39 @@ export const DedicatedProductCatalog: React.FC<DedicatedProductCatalogProps> = (
         </div>
       </section>
 
-      {/* 2. Optional Categories Circular Slider / Row */}
-      {categoryCircles && categoryCircles.length > 0 && (
-        <section className="pt-12 pb-6 border-b border-gray-100">
+      {/* 2. Optional Categories Circular Slider / Row with Drag-to-Scroll */}
+      {activeCategoryCircles && activeCategoryCircles.length > 0 && (
+        <section className="pt-12 pb-6 border-b border-gray-100 select-none">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-start sm:justify-center gap-6 sm:gap-8 overflow-x-auto pb-4 no-scrollbar">
-              {categoryCircles.map((cat) => {
+            <div
+              ref={sliderRef}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUpOrLeave}
+              onMouseLeave={handleMouseUpOrLeave}
+              className={`flex items-center gap-6 sm:gap-8 overflow-x-auto pb-4 no-scrollbar cursor-grab active:cursor-grabbing ${
+                isDragging ? 'cursor-grabbing select-none' : ''
+              }`}
+              style={{
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                WebkitOverflowScrolling: 'touch',
+              }}
+            >
+              {activeCategoryCircles.map((cat) => {
                 const isSelected = selectedCategory === cat.filterKey;
                 return (
                   <button
                     key={cat.id}
-                    onClick={() => handleCategoryCircleClick(cat.filterKey)}
+                    onClick={() => {
+                      if (!isDragMoved.current) {
+                        handleCategoryCircleClick(cat.filterKey);
+                      }
+                    }}
                     className="flex flex-col items-center flex-shrink-0 group cursor-pointer focus:outline-hidden"
                   >
                     <div
-                      className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden p-1 transition-all duration-300 ${
+                      className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden p-1 transition-all duration-300 pointer-events-none ${
                         isSelected
                           ? 'ring-2 ring-[#093624] scale-105'
                           : 'border border-gray-200 group-hover:border-[#093624] group-hover:scale-105'
@@ -340,7 +455,8 @@ export const DedicatedProductCatalog: React.FC<DedicatedProductCatalogProps> = (
                       <img
                         src={cat.image}
                         alt={cat.label}
-                        className="w-full h-full object-cover rounded-full transition-transform duration-500 group-hover:scale-110"
+                        draggable={false}
+                        className="w-full h-full object-cover rounded-full transition-transform duration-500 group-hover:scale-110 pointer-events-none select-none"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src =
                             '/assets/img/fashion-2/category/cat-1.jpg';
@@ -348,7 +464,7 @@ export const DedicatedProductCatalog: React.FC<DedicatedProductCatalogProps> = (
                       />
                     </div>
                     <span
-                      className={`mt-2.5 text-xs sm:text-sm font-satoshi-med transition-colors ${
+                      className={`mt-2.5 text-xs sm:text-sm font-satoshi-med transition-colors pointer-events-none ${
                         isSelected
                           ? 'text-[#093624] font-bold'
                           : 'text-[#141414] group-hover:text-[#093624]'
@@ -445,7 +561,7 @@ export const DedicatedProductCatalog: React.FC<DedicatedProductCatalogProps> = (
                   </h4>
                   <ul className="space-y-1.5 text-xs font-satoshi-med text-[#141414] max-h-60 overflow-y-auto">
                     {(
-                      categoryOptions || [
+                      activeCategoryOptions || [
                         { key: 'all', label: 'All Categories' },
                         { key: 'Tops', label: 'Tops' },
                         { key: 'Shirts', label: 'Shirts' },

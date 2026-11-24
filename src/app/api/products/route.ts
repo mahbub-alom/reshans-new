@@ -19,7 +19,9 @@ async function verifyAdminAuth(request: Request) {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
+    const page = searchParams.get('page');
     const category = searchParams.get('category');
+    const categoryId = searchParams.get('categoryId');
     const search = searchParams.get('search');
     const department = searchParams.get('department');
     const badge = searchParams.get('badge');
@@ -30,7 +32,12 @@ export async function GET(request: Request) {
     if (process.env.DATABASE_URL) {
       try {
         const where: any = {};
-        if (category && category !== 'all') {
+        if (page && page !== 'all') {
+          where.page = page;
+        }
+        if (categoryId && categoryId !== 'all') {
+          where.categoryId = categoryId;
+        } else if (category && category !== 'all') {
           where.category = { name: { contains: category } };
         }
         if (department && department !== 'all') {
@@ -74,9 +81,9 @@ export async function GET(request: Request) {
           const mapped = dbProducts.map((p) => {
             let colorsArray: { name: string; hex: string; image?: string }[] = [];
             try {
-              if (p.colors.startsWith('[')) {
+              if (p.colors && p.colors.startsWith('[')) {
                 colorsArray = JSON.parse(p.colors);
-              } else {
+              } else if (p.colors) {
                 colorsArray = p.colors.split(',').map((pair) => {
                   const [cName, cHex] = pair.split(':');
                   return { name: cName?.trim() || 'Color', hex: cHex?.trim() || '#000000' };
@@ -91,6 +98,8 @@ export async function GET(request: Request) {
               name: p.name,
               sku: p.sku || undefined,
               category: p.category?.name || 'Apparel',
+              categoryId: p.categoryId || undefined,
+              page: p.page || p.category?.page || 'Shop',
               price: p.price,
               originalPrice: p.originalPrice || undefined,
               discount: p.discount || undefined,
@@ -101,14 +110,16 @@ export async function GET(request: Request) {
               backImage: p.backImage || p.frontImage,
               description: p.description,
               sizes: p.sizes ? p.sizes.split(',').map((s) => s.trim()) : ['S', 'M', 'L', 'XL'],
-              colors: colorsArray,
+              colors: colorsArray.length ? colorsArray : [{ name: 'Deep Forest', hex: '#093624' }],
               inStock: p.inStock,
               stockCount: p.stockCount,
               isTrending: p.isTrending,
               isNewArrival: p.isNewArrival,
               isBestSeller: p.isBestSeller,
+              tabCategory: (p.tabCategory as any) || undefined,
               department: (p.department as any) || 'all',
               brand: p.brand?.name || undefined,
+              brandId: p.brandId || undefined,
             };
           });
 
@@ -118,32 +129,34 @@ export async function GET(request: Request) {
             count: mapped.length,
           });
         }
-      } catch (dbErr) {
-        console.warn('Prisma query failed, falling back to catalog:', dbErr);
+      } catch (err) {
+        console.warn('Prisma fetch products fallback:', err);
       }
     }
 
-    // Default catalog response
+    // Default static fallback products
     let items = [...PRODUCTS];
+
+    if (page && page !== 'all') {
+      items = items.filter((p) => (p.page || 'Shop').toLowerCase() === page.toLowerCase());
+    }
+    if (category && category !== 'all') {
+      items = items.filter((p) =>
+        p.category.toLowerCase().includes(category.toLowerCase())
+      );
+    }
     if (department && department !== 'all') {
       items = items.filter((p) => p.department === department);
     }
-    if (category && category !== 'all') {
-      items = items.filter((p) => p.category.toLowerCase().includes(category.toLowerCase()));
+    if (badge) {
+      items = items.filter((p) => p.badge === badge);
     }
     if (isNew === 'true') {
       items = items.filter((p) => p.isNewArrival || p.badge === 'new');
     }
     if (onSale === 'true') {
-      items = items.filter((p) => p.badge === 'sale' || !!p.originalPrice || !!p.discount);
-    }
-    if (collection && collection !== 'all') {
-      const col = collection.toLowerCase();
       items = items.filter(
-        (p) =>
-          p.category.toLowerCase().includes(col) ||
-          p.name.toLowerCase().includes(col) ||
-          p.description.toLowerCase().includes(col)
+        (p) => p.badge === 'sale' || p.originalPrice || p.discount
       );
     }
     if (search) {
@@ -185,7 +198,6 @@ export async function PATCH(request: Request) {
 
     if (process.env.DATABASE_URL) {
       try {
-        // Check if product exists in DB
         const existing = await prisma.product.findUnique({
           where: { id },
         });
@@ -203,44 +215,12 @@ export async function PATCH(request: Request) {
             product: updated,
             message: 'Stock updated successfully in database',
           });
-        } else {
-          // If product does not exist in DB yet (e.g. initial catalog product), create or update
-          const catalogItem = PRODUCTS.find((p) => p.id === id);
-          if (catalogItem) {
-            const created = await prisma.product.create({
-              data: {
-                id: catalogItem.id,
-                name: catalogItem.name,
-                sku: catalogItem.sku || `RSH-${catalogItem.id}`,
-                description: catalogItem.description || 'Luxury artisanal apparel',
-                price: catalogItem.price,
-                originalPrice: catalogItem.originalPrice || null,
-                discount: catalogItem.discount || null,
-                badge: catalogItem.badge || null,
-                frontImage: catalogItem.frontImage,
-                backImage: catalogItem.backImage || catalogItem.frontImage,
-                inStock: inStock !== undefined ? Boolean(inStock) : catalogItem.inStock,
-                stockCount: stockCount !== undefined ? Number(stockCount) : (inStock ? 25 : 0),
-                rating: catalogItem.rating || 5,
-                reviewsCount: catalogItem.reviewsCount || 0,
-                sizes: (catalogItem.sizes || ['S', 'M', 'L', 'XL']).join(','),
-                colors: JSON.stringify(catalogItem.colors || [{ name: 'Deep Forest', hex: '#093624' }]),
-                department: catalogItem.department || 'all',
-              },
-            });
-            return NextResponse.json({
-              success: true,
-              product: created,
-              message: 'Stock initialized and updated in database',
-            });
-          }
         }
       } catch (dbErr) {
         console.warn('Prisma stock update failed:', dbErr);
       }
     }
 
-    // In-memory / fallback response
     return NextResponse.json({
       success: true,
       message: 'Stock updated in session state',
@@ -265,7 +245,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { name, price, category, description, frontImage, stockCount } = body;
+    const { name, price, category, categoryId, page, brand, brandId, description, frontImage, backImage, sizes, colors, stockCount } = body;
 
     if (!name || !price) {
       return NextResponse.json(
@@ -274,8 +254,46 @@ export async function POST(request: Request) {
       );
     }
 
+    let resolvedCategoryId = categoryId;
+    let resolvedPage = page;
+    let resolvedBrandId = brandId;
+
     if (process.env.DATABASE_URL) {
       try {
+        // Resolve category if not provided by ID
+        if (!resolvedCategoryId && category) {
+          const matchedCategory = await prisma.category.findFirst({
+            where: { name: category },
+          });
+          if (matchedCategory) {
+            resolvedCategoryId = matchedCategory.id;
+            if (!resolvedPage) resolvedPage = matchedCategory.page;
+          }
+        } else if (resolvedCategoryId && !resolvedPage) {
+          const matchedCategory = await prisma.category.findUnique({
+            where: { id: resolvedCategoryId },
+          });
+          if (matchedCategory) {
+            resolvedPage = matchedCategory.page;
+          }
+        }
+
+        // Resolve brand if brand name given
+        if (!resolvedBrandId && brand) {
+          const matchedBrand = await prisma.brand.findFirst({
+            where: { name: brand },
+          });
+          if (matchedBrand) {
+            resolvedBrandId = matchedBrand.id;
+          }
+        }
+
+        // Determine department from page
+        const department = resolvedPage === 'Men' ? 'men' : resolvedPage === 'Women' ? 'women' : 'all';
+
+        const sizesStr = Array.isArray(sizes) ? sizes.join(',') : (sizes || 'S,M,L,XL');
+        const colorsStr = Array.isArray(colors) ? JSON.stringify(colors) : (colors || 'Forest Green:#093624');
+
         const newProduct = await prisma.product.create({
           data: {
             name,
@@ -286,29 +304,48 @@ export async function POST(request: Request) {
             discount: body.discount || null,
             badge: body.badge || null,
             frontImage: frontImage || '/assets/img/fashion-1/product/product-1/front-img-1.jpg',
-            backImage: body.backImage || frontImage,
+            backImage: backImage || frontImage,
             inStock: body.inStock !== undefined ? body.inStock : true,
             stockCount: stockCount ? Number(stockCount) : 20,
             isTrending: !!body.isTrending,
             isBestSeller: !!body.isBestSeller,
             isNewArrival: !!body.isNewArrival,
             tabCategory: body.tabCategory || 'new',
-            department: body.department || 'men',
+            department,
+            page: resolvedPage || 'Shop',
+            sizes: sizesStr,
+            colors: colorsStr,
+            categoryId: resolvedCategoryId || null,
+            brandId: resolvedBrandId || null,
           },
+          include: { category: true, brand: true },
         });
 
         return NextResponse.json(
-          { success: true, product: newProduct, message: 'Product created successfully' },
+          {
+            success: true,
+            product: {
+              ...newProduct,
+              category: newProduct.category?.name || category || 'Apparel',
+              page: newProduct.page || resolvedPage || 'Shop',
+              brand: newProduct.brand?.name || brand,
+              sizes: Array.isArray(sizes) ? sizes : sizesStr.split(','),
+              colors: Array.isArray(colors) ? colors : [{ name: 'Default', hex: '#093624' }],
+            },
+            message: 'Product created successfully',
+          },
           { status: 201 }
         );
       } catch (dbErr) {
-        console.warn('Prisma create failed, returning simulated created product:', dbErr);
+        console.warn('Prisma create failed, falling back:', dbErr);
       }
     }
 
     const created = {
       id: `prod-${Date.now()}`,
       ...body,
+      page: resolvedPage || 'Shop',
+      category: category || 'Apparel',
       inStock: body.inStock !== undefined ? body.inStock : true,
       stockCount: stockCount ? Number(stockCount) : 20,
     };
@@ -320,6 +357,147 @@ export async function POST(request: Request) {
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to create product' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    const admin = await verifyAdminAuth(request);
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Administrator privileges required to update products' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const { id, name, price, category, categoryId, page, brand, brandId, description, frontImage, backImage, sizes, colors, stockCount, inStock, isTrending, isBestSeller, isNewArrival, discount, originalPrice, badge } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: 'Product ID is required' },
+        { status: 400 }
+      );
+    }
+
+    let resolvedCategoryId = categoryId;
+    let resolvedPage = page;
+    let resolvedBrandId = brandId;
+
+    if (process.env.DATABASE_URL) {
+      try {
+        if (!resolvedCategoryId && category) {
+          const matchedCategory = await prisma.category.findFirst({
+            where: { name: category },
+          });
+          if (matchedCategory) {
+            resolvedCategoryId = matchedCategory.id;
+            if (!resolvedPage) resolvedPage = matchedCategory.page;
+          }
+        }
+
+        if (!resolvedBrandId && brand) {
+          const matchedBrand = await prisma.brand.findFirst({
+            where: { name: brand },
+          });
+          if (matchedBrand) {
+            resolvedBrandId = matchedBrand.id;
+          }
+        }
+
+        const department = resolvedPage === 'Men' ? 'men' : resolvedPage === 'Women' ? 'women' : undefined;
+
+        const updateData: any = {};
+        if (name !== undefined) updateData.name = name;
+        if (price !== undefined) updateData.price = Number(price);
+        if (originalPrice !== undefined) updateData.originalPrice = originalPrice ? Number(originalPrice) : null;
+        if (discount !== undefined) updateData.discount = discount || null;
+        if (badge !== undefined) updateData.badge = badge || null;
+        if (description !== undefined) updateData.description = description;
+        if (frontImage !== undefined) updateData.frontImage = frontImage;
+        if (backImage !== undefined) updateData.backImage = backImage;
+        if (inStock !== undefined) updateData.inStock = Boolean(inStock);
+        if (stockCount !== undefined) updateData.stockCount = Number(stockCount);
+        if (isTrending !== undefined) updateData.isTrending = Boolean(isTrending);
+        if (isBestSeller !== undefined) updateData.isBestSeller = Boolean(isBestSeller);
+        if (isNewArrival !== undefined) updateData.isNewArrival = Boolean(isNewArrival);
+        if (resolvedPage !== undefined) updateData.page = resolvedPage;
+        if (department !== undefined) updateData.department = department;
+        if (resolvedCategoryId !== undefined) updateData.categoryId = resolvedCategoryId;
+        if (resolvedBrandId !== undefined) updateData.brandId = resolvedBrandId;
+        if (sizes !== undefined) {
+          updateData.sizes = Array.isArray(sizes) ? sizes.join(',') : sizes;
+        }
+        if (colors !== undefined) {
+          updateData.colors = Array.isArray(colors) ? JSON.stringify(colors) : colors;
+        }
+
+        const updated = await prisma.product.update({
+          where: { id },
+          data: updateData,
+          include: { category: true, brand: true },
+        });
+
+        return NextResponse.json({
+          success: true,
+          product: {
+            ...updated,
+            category: updated.category?.name || category,
+            page: updated.page || resolvedPage,
+            brand: updated.brand?.name || brand,
+          },
+        });
+      } catch (dbErr) {
+        console.warn('Prisma product update fallback:', dbErr);
+      }
+    }
+
+    return NextResponse.json({ success: true, product: body });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to update product' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const admin = await verifyAdminAuth(request);
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Administrator privileges required to delete products' },
+        { status: 403 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: 'Product ID is required' },
+        { status: 400 }
+      );
+    }
+
+    if (process.env.DATABASE_URL) {
+      try {
+        await prisma.product.delete({
+          where: { id },
+        });
+        return NextResponse.json({ success: true, message: 'Product deleted successfully' });
+      } catch (dbErr) {
+        console.warn('Prisma delete product fallback:', dbErr);
+      }
+    }
+
+    return NextResponse.json({ success: true, message: 'Product deleted' });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to delete product' },
       { status: 500 }
     );
   }

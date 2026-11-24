@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Layers,
   Plus,
@@ -11,9 +11,14 @@ import {
   X,
   Check,
   AlertCircle,
+  Upload,
+  Image as ImageIcon,
+  Loader2,
 } from 'lucide-react';
 import { CategoryDetail, BrandItem } from '../../../types';
 import { useShop } from '../../../context/ShopContext';
+
+const PAGE_OPTIONS = ['Shop', 'Men', 'Women', 'Collections'] as const;
 
 export const AdminCategoriesTab: React.FC = () => {
   const {
@@ -24,20 +29,34 @@ export const AdminCategoriesTab: React.FC = () => {
     brands,
     addBrand,
     deleteBrand,
-    navigate,
     navigateToCategory,
+    showToast,
   } = useShop();
 
   // Category Modal State
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<CategoryDetail | null>(null);
-  const [catForm, setCatForm] = useState({
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [catForm, setCatForm] = useState<{
+    page: 'Shop' | 'Men' | 'Women' | 'Collections';
+    name: string;
+    slug: string;
+    image: string;
+    description: string;
+    status: 'Active' | 'Inactive';
+  }>({
+    page: 'Shop',
     name: '',
     slug: '',
-    image: '/assets/img/fashion-1/category/category-1.jpg',
+    image: '',
     description: '',
-    status: 'Active' as 'Active' | 'Hidden',
+    status: 'Active',
   });
+
+  // Filter state for Categories list
+  const [selectedPageFilter, setSelectedPageFilter] = useState<string>('all');
 
   // Brand Modal State
   const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
@@ -49,10 +68,11 @@ export const AdminCategoriesTab: React.FC = () => {
   const handleOpenAddCat = () => {
     setEditingCategory(null);
     setCatForm({
+      page: 'Shop',
       name: '',
       slug: '',
-      image: '/assets/img/fashion-1/category/category-1.jpg',
-      description: 'Contemporary fashion garments crafted from natural yarns.',
+      image: '',
+      description: '',
       status: 'Active',
     });
     setIsCatModalOpen(true);
@@ -61,34 +81,74 @@ export const AdminCategoriesTab: React.FC = () => {
   const handleOpenEditCat = (cat: CategoryDetail) => {
     setEditingCategory(cat);
     setCatForm({
+      page: (cat.page as any) || 'Shop',
       name: cat.name,
       slug: cat.slug,
-      image: cat.image,
-      description: cat.description,
-      status: cat.status,
+      image: cat.image || '',
+      description: cat.description || '',
+      status: cat.status === 'Inactive' ? 'Inactive' : 'Active',
     });
     setIsCatModalOpen(true);
   };
 
+  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('Please select a valid image file');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (data.success && data.url) {
+        setCatForm((prev) => ({ ...prev, image: data.url }));
+        showToast('Image uploaded to Cloudinary successfully!');
+      } else {
+        showToast(data.error || 'Image upload failed');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Image upload error');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const handleSaveCat = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!catForm.name.trim()) return;
+    if (!catForm.name.trim()) {
+      showToast('Category name is required');
+      return;
+    }
 
-    const slug = catForm.slug.trim() || catForm.name.toLowerCase().replace(/\s+/g, '-');
+    const slug = catForm.slug.trim() || catForm.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
     if (editingCategory) {
       updateCategory(editingCategory.id, {
+        page: catForm.page,
         name: catForm.name,
         slug,
-        image: catForm.image,
+        image: catForm.image || undefined,
         description: catForm.description,
         status: catForm.status,
       });
     } else {
       addCategory({
+        page: catForm.page,
         name: catForm.name,
         slug,
-        image: catForm.image,
+        image: catForm.image || undefined,
         description: catForm.description,
         status: catForm.status,
       });
@@ -110,6 +170,11 @@ export const AdminCategoriesTab: React.FC = () => {
     setIsBrandModalOpen(false);
   };
 
+  const filteredCategories = categories.filter((cat) => {
+    if (selectedPageFilter === 'all') return true;
+    return (cat.page || 'Shop').toLowerCase() === selectedPageFilter.toLowerCase();
+  });
+
   return (
     <div className="space-y-8">
       {/* 1. Category Management Section */}
@@ -121,56 +186,83 @@ export const AdminCategoriesTab: React.FC = () => {
               <span>Product Categories ({categories.length})</span>
             </h3>
             <p className="text-xs text-brand-body font-satoshi">
-              Organize your catalog departments, clothing classifications, and shop filters
+              Organize categories assigned to Shop, Men, Women, and Collections pages
             </p>
           </div>
 
-          <button
-            onClick={handleOpenAddCat}
-            className="px-4 py-2 bg-[#093624] hover:opacity-90 text-[#F9F295] rounded-xs text-xs font-satoshi-bold uppercase tracking-wider flex items-center gap-2 transition-opacity cursor-pointer self-start sm:self-auto"
-          >
-            <Plus size={16} />
-            <span>Add Category</span>
-          </button>
+          <div className="flex items-center gap-3 self-start sm:self-auto">
+            {/* Filter categories by page */}
+            <select
+              value={selectedPageFilter}
+              onChange={(e) => setSelectedPageFilter(e.target.value)}
+              className="px-3 py-1.5 bg-[#F9F9F9] border border-[#EBEBEB] text-xs font-satoshi-med rounded-xs text-[#141414] focus:outline-none focus:border-[#093624]"
+            >
+              <option value="all">All Pages</option>
+              {PAGE_OPTIONS.map((p) => (
+                <option key={p} value={p}>
+                  {p} Page
+                </option>
+              ))}
+            </select>
+
+            <button
+              onClick={handleOpenAddCat}
+              className="px-4 py-2 bg-[#093624] hover:opacity-90 text-[#F9F295] rounded-xs text-xs font-satoshi-bold uppercase tracking-wider flex items-center gap-2 transition-opacity cursor-pointer"
+            >
+              <Plus size={16} />
+              <span>Add Category</span>
+            </button>
+          </div>
         </div>
 
         {/* Categories Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {categories.map((cat) => (
+          {filteredCategories.map((cat) => (
             <div
               key={cat.id}
               className="border border-[#EBEBEB] rounded-xs p-4 flex gap-4 bg-[#F9F9F9] hover:bg-white hover:border-[#093624] transition-all group"
             >
-              <div className="w-16 h-20 bg-gray-200 rounded-xs overflow-hidden shrink-0 border border-gray-200">
-                <img
-                  src={cat.image}
-                  alt={cat.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                />
+              <div className="w-16 h-20 bg-gray-200 rounded-xs overflow-hidden shrink-0 border border-gray-200 flex items-center justify-center">
+                {cat.image ? (
+                  <img
+                    src={cat.image}
+                    alt={cat.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                  />
+                ) : (
+                  <ImageIcon size={20} className="text-gray-400" />
+                )}
               </div>
 
               <div className="flex-1 min-w-0 flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-1">
                     <h4 className="text-sm font-bold font-satoshi-bold text-[#141414] truncate">
                       {cat.name}
                     </h4>
-                    <span
-                      className={`text-[9px] font-satoshi-bold px-1.5 py-0.2 rounded-xs uppercase ${
-                        cat.status === 'Active'
-                          ? 'bg-[#093624] text-[#F9F295]'
-                          : 'bg-gray-200 text-gray-700'
-                      }`}
-                    >
-                      {cat.status}
-                    </span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="text-[9px] font-satoshi-bold px-1.5 py-0.5 rounded-xs uppercase bg-gray-200 text-gray-800">
+                        {cat.page || 'Shop'}
+                      </span>
+                      <span
+                        className={`text-[9px] font-satoshi-bold px-1.5 py-0.5 rounded-xs uppercase ${
+                          cat.status === 'Active'
+                            ? 'bg-[#093624] text-[#F9F295]'
+                            : 'bg-red-100 text-red-700'
+                        }`}
+                      >
+                        {cat.status}
+                      </span>
+                    </div>
                   </div>
                   <span className="text-[10px] text-gray-400 font-mono block">
                     /{cat.slug}
                   </span>
-                  <p className="text-[11px] text-gray-500 font-satoshi mt-1 line-clamp-2">
-                    {cat.description}
-                  </p>
+                  {cat.description && (
+                    <p className="text-[11px] text-gray-500 font-satoshi mt-1 line-clamp-2">
+                      {cat.description}
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between pt-2 border-t border-gray-200/60 text-xs">
@@ -185,7 +277,7 @@ export const AdminCategoriesTab: React.FC = () => {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleOpenEditCat(cat)}
-                      className="p-1 text-gray-500 hover:text-[#093624] rounded-xs"
+                      className="p-1 text-gray-500 hover:text-[#093624] rounded-xs cursor-pointer"
                       title="Edit Category"
                     >
                       <Edit size={13} />
@@ -193,7 +285,7 @@ export const AdminCategoriesTab: React.FC = () => {
                     {categories.length > 1 && (
                       <button
                         onClick={() => deleteCategory(cat.id)}
-                        className="p-1 text-gray-400 hover:text-[#093624] rounded-xs"
+                        className="p-1 text-gray-400 hover:text-red-600 rounded-xs cursor-pointer"
                         title="Delete Category"
                       >
                         <Trash2 size={13} />
@@ -271,13 +363,33 @@ export const AdminCategoriesTab: React.FC = () => {
               </h3>
               <button
                 onClick={() => setIsCatModalOpen(false)}
-                className="p-1 text-white/70 hover:text-white"
+                className="p-1 text-white/70 hover:text-white cursor-pointer"
               >
                 <X size={16} />
               </button>
             </div>
 
             <form onSubmit={handleSaveCat} className="p-5 space-y-4 text-xs font-satoshi">
+              {/* Page Selection */}
+              <div>
+                <label className="block font-satoshi-bold uppercase tracking-wider text-brand-body mb-1">
+                  Select Page *
+                </label>
+                <select
+                  required
+                  value={catForm.page}
+                  onChange={(e) => setCatForm({ ...catForm, page: e.target.value as any })}
+                  className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs focus:outline-none focus:border-[#093624]"
+                >
+                  {PAGE_OPTIONS.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Category Name */}
               <div>
                 <label className="block font-satoshi-bold uppercase tracking-wider text-brand-body mb-1">
                   Category Name *
@@ -287,36 +399,86 @@ export const AdminCategoriesTab: React.FC = () => {
                   required
                   value={catForm.name}
                   onChange={(e) => setCatForm({ ...catForm, name: e.target.value })}
-                  placeholder="e.g. Formal Shirts"
+                  placeholder="e.g. T-Shirts"
                   className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs focus:outline-none focus:border-[#093624]"
                 />
               </div>
 
+              {/* Status */}
               <div>
                 <label className="block font-satoshi-bold uppercase tracking-wider text-brand-body mb-1">
-                  URL Slug
+                  Category Status *
                 </label>
-                <input
-                  type="text"
-                  value={catForm.slug}
-                  onChange={(e) => setCatForm({ ...catForm, slug: e.target.value })}
-                  placeholder="formal-shirts"
+                <select
+                  value={catForm.status}
+                  onChange={(e) => setCatForm({ ...catForm, status: e.target.value as any })}
                   className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs focus:outline-none focus:border-[#093624]"
-                />
+                >
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
               </div>
 
+              {/* Category Image (Optional) with Cloudinary Upload */}
               <div>
                 <label className="block font-satoshi-bold uppercase tracking-wider text-brand-body mb-1">
-                  Category Image URL
+                  Category Image (Optional - Cloudinary Upload)
                 </label>
-                <input
-                  type="text"
-                  value={catForm.image}
-                  onChange={(e) => setCatForm({ ...catForm, image: e.target.value })}
-                  className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs focus:outline-none focus:border-[#093624]"
-                />
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    onChange={handleImageFileUpload}
+                    className="hidden"
+                    id="cat-image-file"
+                  />
+                  <label
+                    htmlFor="cat-image-file"
+                    className={`px-3 py-2 bg-[#093624] text-[#F9F295] font-satoshi-bold rounded-xs cursor-pointer flex items-center gap-1.5 hover:opacity-90 ${
+                      isUploading ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 size={13} className="animate-spin" />
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={13} />
+                        <span>Upload Image to Cloudinary</span>
+                      </>
+                    )}
+                  </label>
+
+                  {catForm.image && (
+                    <button
+                      type="button"
+                      onClick={() => setCatForm({ ...catForm, image: '' })}
+                      className="text-red-500 hover:text-red-700 text-[11px] underline"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+
+                {catForm.image && (
+                  <div className="flex items-center gap-3 p-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs">
+                    <img
+                      src={catForm.image}
+                      alt="Category Preview"
+                      className="w-12 h-14 object-cover rounded-xs border border-gray-200"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] text-gray-500 truncate">{catForm.image}</p>
+                      <span className="text-[9px] text-[#093624] font-satoshi-bold">Cloudinary Hosted</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
+              {/* Description */}
               <div>
                 <label className="block font-satoshi-bold uppercase tracking-wider text-brand-body mb-1">
                   Description
@@ -325,6 +487,7 @@ export const AdminCategoriesTab: React.FC = () => {
                   rows={2}
                   value={catForm.description}
                   onChange={(e) => setCatForm({ ...catForm, description: e.target.value })}
+                  placeholder="Optional brief description"
                   className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs focus:outline-none focus:border-[#093624]"
                 />
               </div>
@@ -339,9 +502,10 @@ export const AdminCategoriesTab: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-1.5 bg-[#093624] text-[#F9F295] font-satoshi-bold rounded-xs cursor-pointer"
+                  disabled={isUploading}
+                  className="px-5 py-1.5 bg-[#093624] text-[#F9F295] font-satoshi-bold rounded-xs cursor-pointer disabled:opacity-50"
                 >
-                  Save Category
+                  {editingCategory ? 'Update Category' : 'Save Category'}
                 </button>
               </div>
             </form>
@@ -357,7 +521,7 @@ export const AdminCategoriesTab: React.FC = () => {
               <h3 className="text-sm font-bold font-satoshi-bold">Add Fashion Label / Brand</h3>
               <button
                 onClick={() => setIsBrandModalOpen(false)}
-                className="p-1 text-white/70 hover:text-white"
+                className="p-1 text-white/70 hover:text-white cursor-pointer"
               >
                 <X size={16} />
               </button>
@@ -373,20 +537,20 @@ export const AdminCategoriesTab: React.FC = () => {
                   required
                   value={brandForm.name}
                   onChange={(e) => setBrandForm({ ...brandForm, name: e.target.value })}
-                  placeholder="e.g. Reshans Bespoke"
+                  placeholder="e.g. Reshans Atelier"
                   className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs focus:outline-none focus:border-[#093624]"
                 />
               </div>
 
               <div>
                 <label className="block font-satoshi-bold uppercase tracking-wider text-brand-body mb-1">
-                  Origin / Manufacturing Hub
+                  Origin / Location
                 </label>
                 <input
                   type="text"
                   value={brandForm.origin}
                   onChange={(e) => setBrandForm({ ...brandForm, origin: e.target.value })}
-                  placeholder="Dhaka, Bangladesh"
+                  placeholder="e.g. Dhaka, Bangladesh"
                   className="w-full px-3 py-2 bg-[#F9F9F9] border border-[#EBEBEB] rounded-xs focus:outline-none focus:border-[#093624]"
                 />
               </div>
@@ -403,7 +567,7 @@ export const AdminCategoriesTab: React.FC = () => {
                   type="submit"
                   className="px-5 py-1.5 bg-[#093624] text-[#F9F295] font-satoshi-bold rounded-xs cursor-pointer"
                 >
-                  Add Brand
+                  Save Brand
                 </button>
               </div>
             </form>

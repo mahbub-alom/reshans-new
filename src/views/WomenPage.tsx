@@ -29,6 +29,7 @@ export const WomenPage: React.FC = () => {
       pageTitle="Women's Collection"
       pageSubtitle="Elevated everyday luxury, artisanal knitwear, flowing silhouettes, and handcrafted leather accessories tailored for effortless elegance."
       breadcrumbLabel="Women"
+      pageType="Women"
       departmentFilter="women"
       categoryCircles={WOMEN_CATEGORY_CIRCLES}
       categoryOptions={WOMEN_SUBCATEGORIES}
