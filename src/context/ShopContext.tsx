@@ -1545,7 +1545,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
           customerName: payload.customerName || currentUser?.name || 'Customer',
           customerEmail: payload.customerEmail || currentUser?.email || '',
           customerPhone: payload.customerPhone || currentUser?.phone || '',
-          customerAddress: payload.pickupAddress || currentUser?.city || '',
+          customerAddress: payload.pickupAddress || '',
           userId: currentUser?.id,
         }),
       });

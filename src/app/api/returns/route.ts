@@ -29,6 +29,13 @@ export async function GET(request: Request) {
                 orderStatus: true,
                 total: true,
                 trackingNumber: true,
+                customerName: true,
+                customerEmail: true,
+                customerPhone: true,
+                customerAddress: true,
+                city: true,
+                area: true,
+                postalCode: true,
               },
             },
             user: {
@@ -42,26 +49,40 @@ export async function GET(request: Request) {
           },
         });
 
-        returnRequests = dbReturns.map((r: any) => ({
-          id: r.id,
-          returnNumber: r.returnNumber,
-          orderId: r.orderId,
-          userId: r.userId || undefined,
-          user: r.user ? { id: r.user.id, name: r.user.name, email: r.user.email, role: r.user.role } : undefined,
-          customerName: r.customerName,
-          customerEmail: r.customerEmail,
-          customerPhone: r.customerPhone,
-          customerAddress: r.customerAddress,
-          pickupAddress: r.customerAddress,
-          items: typeof r.itemsJson === 'string' ? JSON.parse(r.itemsJson || '[]') : r.itemsJson || [],
-          refundAmount: r.refundAmount,
-          reason: r.reason,
-          details: r.details || undefined,
-          notes: r.details || undefined,
-          status: r.status,
-          adminNotes: r.adminNotes || undefined,
-          createdAt: r.createdAt ? new Date(r.createdAt).toISOString().replace('T', ' ').substring(0, 16) : '',
-        }));
+        returnRequests = dbReturns.map((r: any) => {
+          // Inherit the exact original delivered order address
+          const originalAddress = r.order?.customerAddress || r.customerAddress || '';
+          const addressBreakdown = [
+            originalAddress,
+            r.order?.area ? `Thana: ${r.order.area}` : '',
+            r.order?.city ? `District: ${r.order.city}` : '',
+            r.order?.postalCode ? `Postal Code: ${r.order.postalCode}` : '',
+          ].filter(Boolean).join(', ');
+
+          return {
+            id: r.id,
+            returnNumber: r.returnNumber,
+            orderId: r.orderId,
+            userId: r.userId || undefined,
+            user: r.user ? { id: r.user.id, name: r.user.name, email: r.user.email, role: r.user.role } : undefined,
+            customerName: r.customerName || r.order?.customerName || 'Customer',
+            customerEmail: r.customerEmail || r.order?.customerEmail || '',
+            customerPhone: r.customerPhone || r.order?.customerPhone || '',
+            customerAddress: originalAddress,
+            pickupAddress: addressBreakdown || originalAddress,
+            city: r.order?.city || undefined,
+            area: r.order?.area || undefined,
+            postalCode: r.order?.postalCode || undefined,
+            items: typeof r.itemsJson === 'string' ? JSON.parse(r.itemsJson || '[]') : r.itemsJson || [],
+            refundAmount: r.refundAmount,
+            reason: r.reason,
+            details: r.details || undefined,
+            notes: r.details || undefined,
+            status: r.status,
+            adminNotes: r.adminNotes || undefined,
+            createdAt: r.createdAt ? new Date(r.createdAt).toISOString().replace('T', ' ').substring(0, 16) : '',
+          };
+        });
       } catch (err) {
         console.warn('Prisma return requests query fallback:', err);
       }
@@ -102,6 +123,7 @@ export async function POST(request: Request) {
     }
 
     // Verify order exists and check eligibility (e.g. Delivered)
+    let targetOrderDb: any = null;
     if (process.env.DATABASE_URL) {
       const order = await prisma.order.findFirst({
         where: {
@@ -125,6 +147,7 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
+      targetOrderDb = order;
     }
 
     const randomSuffix = Math.floor(100000 + Math.random() * 900000);
@@ -132,16 +155,20 @@ export async function POST(request: Request) {
     const itemsJsonStr = JSON.stringify(items);
 
     const effectiveNotes = notes || details || '';
-    const effectiveAddress = pickupAddress || customerAddress || '';
+    // Auto-inherit address from the original delivered order
+    const effectiveAddress = targetOrderDb?.customerAddress || customerAddress || pickupAddress || '';
+    const effectiveName = targetOrderDb?.customerName || customerName || 'Customer';
+    const effectivePhone = targetOrderDb?.customerPhone || customerPhone || '';
+    const effectiveEmail = (targetOrderDb?.customerEmail || customerEmail || '').toLowerCase();
 
     let savedRequest: any = {
       id: returnNumber,
       returnNumber,
       orderId,
-      userId: userId || null,
-      customerName: customerName || 'Customer',
-      customerEmail: (customerEmail || '').toLowerCase(),
-      customerPhone: customerPhone || '',
+      userId: userId || targetOrderDb?.userId || null,
+      customerName: effectiveName,
+      customerEmail: effectiveEmail,
+      customerPhone: effectivePhone,
       customerAddress: effectiveAddress,
       pickupAddress: effectiveAddress,
       items,
@@ -160,10 +187,10 @@ export async function POST(request: Request) {
             id: returnNumber,
             returnNumber,
             orderId,
-            userId: userId || null,
-            customerName: customerName || 'Customer',
-            customerEmail: (customerEmail || '').toLowerCase(),
-            customerPhone: customerPhone || '',
+            userId: userId || targetOrderDb?.userId || null,
+            customerName: effectiveName,
+            customerEmail: effectiveEmail,
+            customerPhone: effectivePhone,
             customerAddress: effectiveAddress,
             itemsJson: itemsJsonStr,
             refundAmount: Number(refundAmount || 0),

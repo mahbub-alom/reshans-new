@@ -323,11 +323,13 @@ export const AdminReturnsTab: React.FC = () => {
 
                 <div>
                   <span className="block text-[11px] text-brand-body uppercase font-bold mb-1">
-                    Pickup Address
+                    Pickup Address (From Original Order)
                   </span>
                   <div className="text-brand-black flex items-start gap-1.5">
                     <MapPin size={14} className="text-primary shrink-0 mt-0.5" />
-                    <span>{selectedReturn.pickupAddress || selectedReturn.customerAddress || 'No pickup address specified'}</span>
+                    <span className="font-medium leading-relaxed">
+                      {selectedReturn.pickupAddress || selectedReturn.customerAddress || 'No address specified'}
+                    </span>
                   </div>
                 </div>
               </div>

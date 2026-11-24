@@ -97,12 +97,12 @@ export const DashboardReturnRequestPage: React.FC = () => {
 
     const result = await submitReturnRequest({
       orderId: activeOrder.id,
-      customerEmail: currentUser?.email || activeOrder.customerEmail,
-      customerName: currentUser?.name || activeOrder.customerName,
-      customerPhone: currentUser?.phone || activeOrder.customerPhone || '',
+      customerEmail: activeOrder.customerEmail || currentUser?.email || '',
+      customerName: activeOrder.customerName || currentUser?.name || 'Customer',
+      customerPhone: activeOrder.customerPhone || currentUser?.phone || '',
       reason: returnReason,
       notes: customerNotes,
-      pickupAddress: currentUser?.city || activeOrder.customerAddress || '',
+      pickupAddress: activeOrder.customerAddress || '',
       refundAmount,
       items: itemsToReturn,
     });
