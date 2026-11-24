@@ -51,6 +51,7 @@ model User {
   reviews          Review[]
   addresses        Address[]
   sessions         Session[]
+  returnRequests   ReturnRequest[]
 
   @@map("users")
 }
@@ -203,6 +204,7 @@ model Order {
   updatedAt       DateTime      @updatedAt
 
   items           OrderItem[]
+  returnRequests  ReturnRequest[]
 
   @@map("orders")
 }
@@ -281,4 +283,30 @@ model Setting {
   updatedAt DateTime @updatedAt
 
   @@map("settings")
+}
+
+model ReturnRequest {
+  id              String   @id @default(uuid())
+  returnNumber    String   @unique
+  orderId         String
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  customerName    String
+  customerEmail   String
+  customerPhone   String
+  customerAddress String   @db.Text
+  itemsJson       String   @db.Text
+  refundAmount    Float
+  reason          String
+  details         String?  @db.Text
+  status          String   @default("Pending") // Pending, Approved, Processing, Picked Up, Completed, Rejected
+  adminNotes      String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([customerEmail])
+  @@index([status])
+  @@map("return_requests")
 }

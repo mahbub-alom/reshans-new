@@ -10,6 +10,7 @@ import {
   BrandItem,
   Coupon,
   ReviewItem,
+  ReturnRequestItem,
   WebsiteBanner,
   WebsiteSettings,
   AdminProfile,
@@ -157,6 +158,35 @@ interface ShopContextType {
   rejectReview: (id: string) => void;
   deleteReview: (id: string) => void;
 
+  // Return Requests Management
+  returnRequests: ReturnRequestItem[];
+  refreshReturnRequests: () => Promise<void>;
+  submitReturnRequest: (payload: {
+    orderId: string;
+    customerEmail?: string;
+    customerName?: string;
+    customerPhone?: string;
+    pickupAddress?: string;
+    items: Array<{
+      productId?: string;
+      productName: string;
+      productImage?: string;
+      quantity: number;
+      price: number;
+      selectedColor?: string;
+      selectedSize?: string;
+    }>;
+    refundAmount: number;
+    reason: string;
+    notes?: string;
+    details?: string;
+  }) => Promise<{ success: boolean; returnRequest?: ReturnRequestItem; error?: string }>;
+  updateReturnRequestStatus: (
+    id: string,
+    status: 'Pending' | 'Approved' | 'Processing' | 'Picked Up' | 'Completed' | 'Rejected',
+    adminNotes?: string
+  ) => Promise<{ success: boolean; error?: string }>;
+
   banners: WebsiteBanner[];
   updateBanner: (id: string, updated: Partial<WebsiteBanner>) => void;
   toggleBanner: (id: string) => void;
@@ -225,6 +255,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [brands, setBrands] = useState<BrandItem[]>(INITIAL_BRANDS);
   const [coupons, setCoupons] = useState<Coupon[]>(INITIAL_COUPONS);
   const [reviews, setReviews] = useState<ReviewItem[]>(INITIAL_REVIEWS);
+  const [returnRequests, setReturnRequests] = useState<ReturnRequestItem[]>([]);
   const [banners, setBanners] = useState<WebsiteBanner[]>(INITIAL_BANNERS);
   const [settings, setSettings] = useState<WebsiteSettings>(INITIAL_SETTINGS);
   const [adminProfile, setAdminProfile] = useState<AdminProfile>(INITIAL_ADMIN_PROFILE);
@@ -238,7 +269,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const fetchStoreSettingsCouponsAndBanners = async () => {
       try {
-        const [settingsRes, couponsRes, bannersRes, productsRes, categoriesRes, brandsRes, reviewsRes, ordersRes] = await Promise.all([
+        const [settingsRes, couponsRes, bannersRes, productsRes, categoriesRes, brandsRes, reviewsRes, ordersRes, returnsRes] = await Promise.all([
           fetch('/api/settings'),
           fetch('/api/coupons'),
           fetch('/api/banners'),
@@ -247,6 +278,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
           fetch('/api/brands'),
           fetch('/api/reviews'),
           fetch('/api/orders'),
+          fetch('/api/returns'),
         ]);
 
         const settingsData = await settingsRes.json();
@@ -285,6 +317,11 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
           try {
             localStorage.setItem('reshans_orders_v1', JSON.stringify(ordersData.orders));
           } catch {}
+        }
+
+        const returnsData = await returnsRes.json();
+        if (returnsData.success && Array.isArray(returnsData.returnRequests)) {
+          setReturnRequests(returnsData.returnRequests);
         }
 
         const productsData = await productsRes.json();
@@ -1434,6 +1471,90 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Return Requests Management Handlers
+  const refreshReturnRequests = async () => {
+    try {
+      const res = await fetch('/api/returns');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.returnRequests)) {
+        setReturnRequests(data.returnRequests);
+      }
+    } catch (err) {
+      console.warn('Could not refresh return requests:', err);
+    }
+  };
+
+  const submitReturnRequest = async (payload: {
+    orderId: string;
+    customerEmail?: string;
+    customerName?: string;
+    customerPhone?: string;
+    pickupAddress?: string;
+    items: Array<{
+      productId?: string;
+      productName: string;
+      productImage?: string;
+      quantity: number;
+      price: number;
+      selectedColor?: string;
+      selectedSize?: string;
+    }>;
+    refundAmount: number;
+    reason: string;
+    notes?: string;
+    details?: string;
+  }) => {
+    try {
+      const res = await fetch('/api/returns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...payload,
+          customerName: payload.customerName || currentUser?.name || 'Customer',
+          customerEmail: payload.customerEmail || currentUser?.email || '',
+          customerPhone: payload.customerPhone || currentUser?.phone || '',
+          customerAddress: payload.pickupAddress || currentUser?.city || '',
+          userId: currentUser?.id,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showToast(data.error || 'Failed to submit return request', 'error');
+        return { success: false, error: data.error };
+      }
+
+      setReturnRequests((prev) => [data.returnRequest, ...prev]);
+      showToast(`Return request #${data.returnRequest.returnNumber} submitted successfully!`);
+      return { success: true, returnRequest: data.returnRequest };
+    } catch (err: any) {
+      showToast('Network error submitting return request', 'error');
+      return { success: false, error: err.message };
+    }
+  };
+
+  const updateReturnRequestStatus = async (
+    id: string,
+    status: 'Pending' | 'Approved' | 'Processing' | 'Picked Up' | 'Completed' | 'Rejected',
+    adminNotes?: string
+  ) => {
+    setReturnRequests((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, status, ...(adminNotes ? { adminNotes } : {}) } : r))
+    );
+    showToast(`Return request status updated to ${status}.`);
+
+    try {
+      await fetch('/api/returns', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status, adminNotes }),
+      });
+      return { success: true };
+    } catch (err: any) {
+      console.warn('Could not update return request in DB:', err);
+      return { success: false, error: err.message };
+    }
+  };
+
   // Admin Banners & Marquee
   const updateBanner = async (id: string, updated: Partial<WebsiteBanner>) => {
     let nextBanners: WebsiteBanner[] = [];
@@ -1595,6 +1716,10 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         approveReview,
         rejectReview,
         deleteReview,
+        returnRequests,
+        refreshReturnRequests,
+        submitReturnRequest,
+        updateReturnRequestStatus,
         banners,
         updateBanner,
         toggleBanner,

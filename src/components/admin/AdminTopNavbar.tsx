@@ -75,6 +75,10 @@ const TAB_TITLES: Record<AdminTab, { title: string; subtitle: string }> = {
     title: 'Customer Reviews & Feedback',
     subtitle: 'Moderate verified reviews, customer ratings, and testimonials',
   },
+  returns: {
+    title: 'Return Requests & Refunds',
+    subtitle: 'Review customer return submissions, track courier pickups, and authorize refunds',
+  },
   settings: {
     title: 'Website & Store Settings',
     subtitle: 'Store location, delivery rates for Dhaka vs outside, and payment gateways',

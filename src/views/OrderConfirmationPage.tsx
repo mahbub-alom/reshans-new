@@ -159,14 +159,7 @@ export const OrderConfirmationPage: React.FC = () => {
               <span>Download Invoice</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="inline-flex items-center gap-2 border border-gray-300 hover:border-[#093624] bg-white text-[#141414] hover:text-[#093624] text-xs font-bold uppercase tracking-wider px-5 py-3.5 rounded-xs transition-colors cursor-pointer font-satoshi-bold"
-            >
-              <Printer size={14} />
-              <span>Print Receipt</span>
-            </button>
+            
           </div>
         </div>
       </div>

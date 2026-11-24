@@ -2,7 +2,7 @@ import React from 'react';
 import { useShop } from '../../context/ShopContext';
 import { DashboardLayout } from '../../components/dashboard/DashboardLayout';
 import { Button } from '../../components/common/Button';
-import { Eye, MapPin, PackageCheck } from 'lucide-react';
+import { Eye, MapPin, PackageCheck, RotateCcw } from 'lucide-react';
 
 export const DashboardOrderPage: React.FC = () => {
   const { navigate, formatPrice, orders, cancelOrder, setTrackedCodeQuery, setSelectedOrderId } = useShop();
@@ -139,6 +139,19 @@ export const DashboardOrderPage: React.FC = () => {
                       >
                         <PackageCheck size={14} />
                         <span>Track Order</span>
+                      </button>
+                    )}
+
+                    {isDone && (
+                      <button
+                        onClick={() => {
+                          setSelectedOrderId(order.id);
+                          navigate('/dashboard/return-request');
+                        }}
+                        className="px-4 py-2 border border-primary text-primary hover:bg-primary hover:text-white text-xs font-bold uppercase tracking-wider font-satoshi-bold transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                      >
+                        <RotateCcw size={14} />
+                        <span>Return Product</span>
                       </button>
                     )}
 

@@ -136,6 +136,34 @@ export interface Coupon {
   isActive: boolean;
 }
 
+export interface ReturnRequestItem {
+  id: string;
+  returnNumber: string;
+  orderId: string;
+  userId?: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string;
+  customerAddress?: string;
+  pickupAddress?: string;
+  items: Array<{
+    productId?: string;
+    productName: string;
+    productImage?: string;
+    quantity: number;
+    price: number;
+    selectedColor?: string;
+    selectedSize?: string;
+  }>;
+  refundAmount: number;
+  reason: string;
+  details?: string;
+  notes?: string;
+  status: 'Pending' | 'Approved' | 'Processing' | 'Picked Up' | 'Completed' | 'Rejected';
+  adminNotes?: string;
+  createdAt: string;
+}
+
 export interface ReviewItem {
   id: string;
   productId: string;

@@ -13,6 +13,7 @@ import { AdminInventoryTab } from './tabs/AdminInventoryTab';
 import { AdminBannersTab } from './tabs/AdminBannersTab';
 import { AdminCouponsTab } from './tabs/AdminCouponsTab';
 import { AdminReviewsTab } from './tabs/AdminReviewsTab';
+import { AdminReturnsTab } from './tabs/AdminReturnsTab';
 import { AdminSettingsTab } from './tabs/AdminSettingsTab';
 import { AdminProfileTab } from './tabs/AdminProfileTab';
 import { useShop } from '../../context/ShopContext';
@@ -31,6 +32,7 @@ export const AdminDashboardPage: React.FC = () => {
     if (currentPath.includes('/admin/banners')) return 'banners';
     if (currentPath.includes('/admin/coupons')) return 'coupons';
     if (currentPath.includes('/admin/reviews')) return 'reviews';
+    if (currentPath.includes('/admin/returns')) return 'returns';
     if (currentPath.includes('/admin/settings')) return 'settings';
     if (currentPath.includes('/admin/profile') || currentPath.includes('/admin/security'))
       return 'profile';
@@ -75,6 +77,8 @@ export const AdminDashboardPage: React.FC = () => {
         return <AdminCouponsTab />;
       case 'reviews':
         return <AdminReviewsTab />;
+      case 'returns':
+        return <AdminReturnsTab />;
       case 'settings':
         return <AdminSettingsTab />;
       case 'profile':

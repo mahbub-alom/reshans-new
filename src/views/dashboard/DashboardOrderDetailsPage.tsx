@@ -151,6 +151,20 @@ export const DashboardOrderDetailsPage: React.FC = () => {
             >
               {order.paymentStatus}
             </span>
+
+            {isDone && (
+              <Button
+                variant="primary"
+                size="sm"
+                icon={<RotateCcw size={14} />}
+                onClick={() => {
+                  setSelectedOrderId(order.id);
+                  navigate('/dashboard/return-request');
+                }}
+              >
+                Return Request
+              </Button>
+            )}
           </div>
         </div>
 

@@ -12,6 +12,7 @@ import {
   Image as ImageIcon,
   Tag,
   Star,
+  RotateCcw,
   Settings,
   ShieldCheck,
   ExternalLink,
@@ -33,6 +34,7 @@ export type AdminTab =
   | 'banners'
   | 'coupons'
   | 'reviews'
+  | 'returns'
   | 'settings'
   | 'profile';
 
@@ -57,12 +59,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   isOpenMobile,
   onCloseMobile,
 }) => {
-  const { navigate, orders, products, reviews, adminProfile, logoutUser } = useShop();
+  const { navigate, orders, products, reviews, returnRequests, adminProfile, logoutUser } = useShop();
 
   // Dynamic counts for notification badges
   const pendingOrdersCount = orders.filter((o) => o.orderStatus === 'Pending' || o.orderStatus === 'Processing').length;
   const lowStockCount = products.filter((p) => !p.inStock || (p.stockCount !== undefined && p.stockCount <= 5)).length;
   const pendingReviewsCount = reviews.filter((r) => r.status === 'pending').length;
+  const pendingReturnsCount = returnRequests ? returnRequests.filter((r) => r.status === 'Pending').length : 0;
 
   const navItems: NavItem[] = [
     {
@@ -121,6 +124,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       icon: <Star size={18} />,
       badge: pendingReviewsCount > 0 ? pendingReviewsCount : undefined,
       badgeColor: 'bg-[#F9F295] text-[#093624]',
+    },
+    {
+      id: 'returns',
+      label: 'Return Requests',
+      icon: <RotateCcw size={18} />,
+      badge: pendingReturnsCount > 0 ? pendingReturnsCount : undefined,
+      badgeColor: 'bg-amber-100 text-amber-900 border border-amber-300',
     },
     {
       id: 'settings',
