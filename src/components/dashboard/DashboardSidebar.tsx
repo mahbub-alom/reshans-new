@@ -126,7 +126,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab })
   };
 
   return (
-    <aside className="bg-white border border-[#EBEBEB] rounded-none p-6 shadow-2xs font-satoshi">
+    <aside className="bg-white border border-[#EBEBEB] rounded-none p-5 sm:p-6 shadow-2xs font-satoshi max-h-[calc(100vh-120px)] overflow-y-auto no-scrollbar">
       {/* Profile Info Header matching .aq-dashboard-profile-info */}
       <div className="text-center pb-6 border-b border-[#F0EDED]">
         <div className="w-20 h-20 mx-auto mb-3.5 rounded-full overflow-hidden border-2 border-primary/20 shadow-xs bg-[#093624] text-[#F9F295] flex items-center justify-center text-2xl font-bold">
