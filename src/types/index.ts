@@ -184,15 +184,17 @@ export interface ReturnRequestItem {
 export interface ReviewItem {
   id: string;
   productId: string;
+  orderId?: string;
   productName: string;
   productImage: string;
   customerName: string;
   customerAvatar?: string;
+  customerEmail?: string;
   rating: number;
   comment: string;
   date: string;
   isVerified: boolean;
-  status: 'approved' | 'pending' | 'rejected';
+  status: 'approved' | 'pending' | 'rejected' | 'hidden';
 }
 
 export interface WebsiteBanner {
@@ -233,6 +235,8 @@ export interface AuthUser {
   role: 'ADMIN' | 'CUSTOMER';
   avatar?: string;
   phone?: string;
+  gender?: string;
+  dob?: string;
   city?: string;
   authProvider?: 'LOCAL' | 'GOOGLE' | 'FACEBOOK';
   status?: string;

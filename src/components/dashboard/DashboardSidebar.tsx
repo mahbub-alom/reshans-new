@@ -82,12 +82,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab })
       icon: <Heart size={18} />,
       onClick: () => openWishlist(),
     },
-    {
-      id: 'offers',
-      label: 'Special Offers',
-      icon: <Tag size={18} />,
-      onClick: () => navigate('/dashboard'),
-    },
+    
     {
       id: 'profile',
       label: 'Profile',

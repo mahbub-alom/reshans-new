@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Product } from '../types';
 import { PRODUCTS } from '../data/products';
 import { useShop } from '../context/ShopContext';
@@ -42,6 +42,7 @@ export const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({ productI
     formatPrice,
     navigate,
     showToast,
+    reviews,
   } = useShop();
 
   // Find product by ID or Slug or fallback to first product
@@ -119,25 +120,42 @@ export const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({ productI
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isImageLightboxOpen, setIsImageLightboxOpen] = useState(false);
 
-  // Reviews list (customer reviews submitted via dashboard)
-  const [reviewsList] = useState([
-    {
-      id: 1,
-      author: 'Orio Madrid',
-      date: '06 January, 2026',
-      rating: 5,
-      comment:
-        'This piece exceeded all my expectations for everyday Dhaka weather. Soft, tailored feel and looks identical to the photoshoot images.',
-    },
-    {
-      id: 2,
-      author: 'Tanvir Rahman',
-      date: '12 January, 2026',
-      rating: 5,
-      comment:
-        'Outstanding quality from Reshans. Fits true to size and color holds vibrantly after several washes. Highly recommended!',
-    },
-  ]);
+  // Dynamic reviews list from database/ShopContext (Only approved & visible reviews for this product)
+  const productReviews = useMemo(() => {
+    const list = reviews.filter(
+      (r) => r.status === 'approved' && (r.productId === product.id || r.productName === product.name)
+    );
+    if (list.length > 0) {
+      return list.map((r) => ({
+        id: r.id,
+        author: r.customerName || 'Verified Buyer',
+        date: r.date || 'Recent',
+        rating: r.rating || 5,
+        comment: r.comment,
+      }));
+    }
+    // Fallback initial sample reviews if no DB reviews yet
+    return [
+      {
+        id: 'init-1',
+        author: 'Orio Madrid',
+        date: '06 January, 2026',
+        rating: 5,
+        comment:
+          'This piece exceeded all my expectations for everyday Dhaka weather. Soft, tailored feel and looks identical to the photoshoot images.',
+      },
+      {
+        id: 'init-2',
+        author: 'Tanvir Rahman',
+        date: '12 January, 2026',
+        rating: 5,
+        comment:
+          'Outstanding quality from Reshans. Fits true to size and color holds vibrantly after several washes. Highly recommended!',
+      },
+    ];
+  }, [reviews, product]);
+
+  const reviewsList = productReviews;
 
   // Question form state
   const [questionName, setQuestionName] = useState('');

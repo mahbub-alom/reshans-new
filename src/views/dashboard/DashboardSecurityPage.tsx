@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { useShop } from '../../context/ShopContext';
 import { DashboardLayout } from '../../components/dashboard/DashboardLayout';
 import { Button } from '../../components/common/Button';
-import { Shield, Lock, Eye, EyeOff, Check, ArrowLeft } from 'lucide-react';
+import { Shield, Lock, Eye, EyeOff, Check, ArrowLeft, Loader2 } from 'lucide-react';
 
 export const DashboardSecurityPage: React.FC = () => {
-  const { navigate } = useShop();
+  const { navigate, currentUser, showToast } = useShop();
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -17,10 +17,14 @@ export const DashboardSecurityPage: React.FC = () => {
 
   const [error, setError] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentPassword || !newPassword || !confirmPassword) return;
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setError('Please fill in all required password fields.');
+      return;
+    }
 
     if (newPassword !== confirmPassword) {
       setError('New passwords do not match. Please verify.');
@@ -33,11 +37,49 @@ export const DashboardSecurityPage: React.FC = () => {
     }
 
     setError(null);
-    setIsSaved(true);
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-    setTimeout(() => setIsSaved(false), 3500);
+    setIsSubmitting(true);
+
+    try {
+      const storedToken = localStorage.getItem('reshans_auth_token');
+      const res = await fetch('/api/user/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(storedToken ? { Authorization: `Bearer ${storedToken}` } : {}),
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+          confirmPassword,
+          userId: currentUser?.id,
+          email: currentUser?.email,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        const errorMsg = data.error || 'Failed to update password.';
+        setError(errorMsg);
+        showToast(errorMsg, 'error');
+        return;
+      }
+
+      setIsSaved(true);
+      showToast(data.message || 'Password changed successfully in database!', 'success');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => setIsSaved(false), 4500);
+    } catch (err: any) {
+      console.error('Password change submit error:', err);
+      const msg = err.message || 'Network error updating password. Please try again.';
+      setError(msg);
+      showToast(msg, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -69,13 +111,13 @@ export const DashboardSecurityPage: React.FC = () => {
                 Change password
               </h4>
               <p className="text-xs text-brand-body font-satoshi">
-                Ensure your account is using a long, random password to stay secure.
+                Ensure your account is using a long, random password to stay secure in our database.
               </p>
             </div>
           </div>
 
           {error && (
-            <div className="p-3 bg-[#F1EFEE] border border-[#141414] text-[#141414] text-xs font-satoshi-bold">
+            <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-satoshi-bold">
               {error}
             </div>
           )}
@@ -83,7 +125,7 @@ export const DashboardSecurityPage: React.FC = () => {
           {isSaved && (
             <div className="p-4 bg-[#F9F295]/50 border border-[#093624] text-[#093624] text-xs font-satoshi-bold flex items-center gap-2">
               <Check size={16} />
-              <span>Your account password has been updated successfully!</span>
+              <span>Your account password has been updated successfully in database!</span>
             </div>
           )}
 
@@ -98,8 +140,11 @@ export const DashboardSecurityPage: React.FC = () => {
                   type={showCurrent ? 'text' : 'password'}
                   required
                   value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="*********"
+                  onChange={(e) => {
+                    setCurrentPassword(e.target.value);
+                    if (error) setError(null);
+                  }}
+                  placeholder="Enter your current password"
                   className="w-full h-12 bg-white border border-[#E0DCD9] pl-4 pr-11 text-xs font-satoshi text-brand-black focus:outline-none focus:border-primary rounded-none"
                 />
                 <button
@@ -122,8 +167,11 @@ export const DashboardSecurityPage: React.FC = () => {
                   type={showNew ? 'text' : 'password'}
                   required
                   value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="*********"
+                  onChange={(e) => {
+                    setNewPassword(e.target.value);
+                    if (error) setError(null);
+                  }}
+                  placeholder="At least 6 characters"
                   className="w-full h-12 bg-white border border-[#E0DCD9] pl-4 pr-11 text-xs font-satoshi text-brand-black focus:outline-none focus:border-primary rounded-none"
                 />
                 <button
@@ -146,8 +194,11 @@ export const DashboardSecurityPage: React.FC = () => {
                   type={showConfirm ? 'text' : 'password'}
                   required
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="*********"
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    if (error) setError(null);
+                  }}
+                  placeholder="Confirm new password"
                   className="w-full h-12 bg-white border border-[#E0DCD9] pl-4 pr-11 text-xs font-satoshi text-brand-black focus:outline-none focus:border-primary rounded-none"
                 />
                 <button
@@ -160,13 +211,22 @@ export const DashboardSecurityPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Save Password button */}
             <div className="pt-2 text-right">
               <Button
                 type="submit"
                 variant="primary"
                 size="md"
+                disabled={isSubmitting}
               >
-                Save Password
+                {isSubmitting ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 size={16} className="animate-spin" />
+                    Updating Password...
+                  </span>
+                ) : (
+                  'Change Password'
+                )}
               </Button>
             </div>
           </form>

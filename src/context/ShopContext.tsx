@@ -154,8 +154,10 @@ interface ShopContextType {
   deleteCoupon: (id: string) => void;
 
   reviews: ReviewItem[];
+  refreshReviews: () => Promise<void>;
   approveReview: (id: string) => void;
   rejectReview: (id: string) => void;
+  toggleHideReview: (id: string) => void;
   deleteReview: (id: string) => void;
 
   // Return Requests Management
@@ -203,6 +205,14 @@ interface ShopContextType {
   loginUser: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   loginWithSocial: (provider: string, email: string, name?: string) => Promise<{ success: boolean; error?: string }>;
   registerUser: (name: string, email: string, password: string, phone?: string) => Promise<{ success: boolean; error?: string }>;
+  updateUserProfile: (profileData: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    gender?: string;
+    dob?: string;
+    avatar?: string;
+  }) => Promise<{ success: boolean; user?: AuthUser; error?: string }>;
   logoutUser: () => Promise<void>;
 
   adminProfile: AdminProfile;
@@ -396,6 +406,16 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         })
         .catch(() => {});
 
+      // Sync reviews
+      fetch('/api/reviews')
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.reviews)) {
+            setReviews(data.reviews);
+          }
+        })
+        .catch(() => {});
+
       // Sync orders
       fetch('/api/orders')
         .then((r) => r.json())
@@ -472,6 +492,46 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       showToast(data.message || 'Registration successful!');
       return { success: true };
     } catch (err: any) {
+      return { success: false, error: err.message || 'Network error' };
+    }
+  };
+
+  const updateUserProfile = async (profileData: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    gender?: string;
+    dob?: string;
+    avatar?: string;
+  }) => {
+    try {
+      const storedToken = authToken || localStorage.getItem('reshans_auth_token');
+      const res = await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(storedToken ? { Authorization: `Bearer ${storedToken}` } : {}),
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          ...profileData,
+          userId: currentUser?.id,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showToast(data.error || 'Failed to update profile', 'error');
+        return { success: false, error: data.error || 'Failed to update profile' };
+      }
+
+      // Update in-memory user immediately in real-time
+      setCurrentUser((prev) => (prev ? { ...prev, ...data.user } : data.user));
+      showToast(data.message || 'Profile updated successfully!', 'success');
+      return { success: true, user: data.user };
+    } catch (err: any) {
+      console.error('Update user profile error:', err);
+      showToast(err.message || 'Network error updating profile', 'error');
       return { success: false, error: err.message || 'Network error' };
     }
   };
@@ -1456,11 +1516,23 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Admin Reviews with DB sync
+  const refreshReviews = async () => {
+    try {
+      const res = await fetch('/api/reviews');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.reviews)) {
+        setReviews(data.reviews);
+      }
+    } catch (err) {
+      console.warn('Could not refresh reviews:', err);
+    }
+  };
+
   const approveReview = async (id: string) => {
     setReviews((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: 'approved' } : r))
     );
-    showToast(`Review approved and published!`);
+    showToast(`Review approved and published to display!`);
 
     try {
       await fetch('/api/reviews', {
@@ -1490,9 +1562,29 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const toggleHideReview = async (id: string) => {
+    const target = reviews.find((r) => r.id === id);
+    const newStatus = target?.status === 'hidden' ? 'approved' : 'hidden';
+
+    setReviews((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r))
+    );
+    showToast(newStatus === 'hidden' ? 'Review hidden from display.' : 'Review unhidden and published!');
+
+    try {
+      await fetch('/api/reviews', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: newStatus }),
+      });
+    } catch (err) {
+      console.warn('Could not update review visibility in DB:', err);
+    }
+  };
+
   const deleteReview = async (id: string) => {
     setReviews((prev) => prev.filter((r) => r.id !== id));
-    showToast(`Review removed.`);
+    showToast(`Review deleted permanently.`);
 
     try {
       await fetch(`/api/reviews?id=${encodeURIComponent(id)}`, {
@@ -1745,8 +1837,10 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toggleCouponStatus,
         deleteCoupon,
         reviews,
+        refreshReviews,
         approveReview,
         rejectReview,
+        toggleHideReview,
         deleteReview,
         returnRequests,
         refreshReturnRequests,
@@ -1765,6 +1859,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginUser,
         loginWithSocial,
         registerUser,
+        updateUserProfile,
         logoutUser,
         adminProfile,
         updateAdminProfile,

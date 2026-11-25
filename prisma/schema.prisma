@@ -40,6 +40,8 @@ model User {
   authProvider     AuthProvider @default(LOCAL)
   socialId         String?
   phone            String?
+  gender           String?      @default("Male")
+  dob              String?
   avatar           String?      @db.Text
   city             String?      @default("Dhaka")
   status           String       @default("Active") // Active, Blocked

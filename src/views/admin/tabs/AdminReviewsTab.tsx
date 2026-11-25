@@ -3,11 +3,12 @@
 import React, { useState } from 'react';
 import {
   Star,
-  CheckCircle,
-  XCircle,
+  Check,
+  X,
+  Eye,
+  EyeOff,
   Trash2,
   Filter,
-  Check,
   ShieldCheck,
   MessageSquare,
 } from 'lucide-react';
@@ -15,8 +16,8 @@ import { ReviewItem } from '../../../types';
 import { useShop } from '../../../context/ShopContext';
 
 export const AdminReviewsTab: React.FC = () => {
-  const { reviews, approveReview, rejectReview, deleteReview } = useShop();
-  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const { reviews, approveReview, rejectReview, toggleHideReview, deleteReview } = useShop();
+  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'hidden'>('all');
 
   const filteredReviews = reviews.filter((r) => {
     if (filter === 'all') return true;
@@ -24,6 +25,9 @@ export const AdminReviewsTab: React.FC = () => {
   });
 
   const pendingCount = reviews.filter((r) => r.status === 'pending').length;
+  const approvedCount = reviews.filter((r) => r.status === 'approved').length;
+  const hiddenCount = reviews.filter((r) => r.status === 'hidden').length;
+  const rejectedCount = reviews.filter((r) => r.status === 'rejected').length;
 
   return (
     <div className="space-y-6 font-satoshi">
@@ -34,28 +38,47 @@ export const AdminReviewsTab: React.FC = () => {
             <Star size={18} className="text-[#093624]" />
             <span>Customer Reviews Moderation</span>
           </h3>
-          
+          <p className="text-xs text-gray-500 mt-0.5">
+            Real-time control: Approve to publish on display, reject, toggle hide/off display, or delete permanently.
+          </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          {(['all', 'pending', 'approved', 'rejected'] as const).map((status) => (
-            <button
-              key={status}
-              onClick={() => setFilter(status)}
-              className={`px-3 py-1.5 rounded-xs text-xs font-satoshi-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5 ${
-                filter === status
-                  ? 'bg-[#093624] text-[#F9F295] shadow-xs'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              <span>{status}</span>
-              {status === 'pending' && pendingCount > 0 && (
-                <span className="w-4 h-4 bg-[#F9F295] text-[#093624] rounded-full text-[9px] flex items-center justify-center font-bold">
-                  {pendingCount}
-                </span>
-              )}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          {(['all', 'pending', 'approved', 'hidden', 'rejected'] as const).map((status) => {
+            const count =
+              status === 'pending'
+                ? pendingCount
+                : status === 'approved'
+                ? approvedCount
+                : status === 'hidden'
+                ? hiddenCount
+                : status === 'rejected'
+                ? rejectedCount
+                : reviews.length;
+
+            return (
+              <button
+                key={status}
+                onClick={() => setFilter(status)}
+                className={`px-3 py-1.5 rounded-xs text-xs font-satoshi-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  filter === status
+                    ? 'bg-[#093624] text-[#F9F295] shadow-xs'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <span>{status}</span>
+                {count > 0 && (
+                  <span
+                    className={`w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold ${
+                      filter === status ? 'bg-[#F9F295] text-[#093624]' : 'bg-gray-200 text-gray-700'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -70,7 +93,7 @@ export const AdminReviewsTab: React.FC = () => {
             <div className="flex items-start gap-4 flex-1 min-w-0">
               <div className="w-14 h-16 bg-gray-100 rounded-xs overflow-hidden shrink-0 border border-gray-100">
                 <img
-                  src={rev.productImage}
+                  src={rev.productImage || '/assets/img/fashion-1/product/product-1/front-img-1.jpg'}
                   alt={rev.productName}
                   className="w-full h-full object-cover"
                 />
@@ -81,36 +104,66 @@ export const AdminReviewsTab: React.FC = () => {
                   <h4 className="text-sm font-bold font-satoshi-bold text-[#141414]">
                     {rev.productName}
                   </h4>
+                  {rev.orderId && (
+                    <span className="text-[10px] text-gray-500 font-mono">
+                      Order #{rev.orderId}
+                    </span>
+                  )}
                   <span
                     className={`text-[9px] font-satoshi-bold uppercase px-2 py-0.5 rounded-xs ${
                       rev.status === 'approved'
                         ? 'bg-[#093624] text-[#F9F295]'
                         : rev.status === 'rejected'
-                        ? 'bg-[#F1EFEE] text-[#6D6868]'
+                        ? 'bg-red-100 text-red-700'
+                        : rev.status === 'hidden'
+                        ? 'bg-gray-200 text-gray-700'
                         : 'bg-[#F9F295] text-[#093624]'
                     }`}
                   >
-                    {rev.status}
+                    {rev.status === 'approved'
+                      ? 'Live on Display'
+                      : rev.status === 'hidden'
+                      ? 'Display Off (Hidden)'
+                      : rev.status}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-3 text-xs mb-2">
-                  <div className="flex text-[#093624]">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <span key={i}>{i < rev.rating ? '★' : '☆'}</span>
-                    ))}
+                <div className="flex flex-wrap items-center gap-3 text-xs mb-2">
+                  <div className="flex items-center text-[#093624] gap-1">
+                    {[1, 2, 3, 4, 5].map((starIndex) => {
+                      const fill = Math.max(0, Math.min(1, rev.rating - (starIndex - 1)));
+                      return (
+                        <div key={starIndex} className="relative inline-block w-3.5 h-3.5">
+                          <Star size={14} className="text-gray-300" />
+                          {fill > 0 && (
+                            <div
+                              className="absolute top-0 left-0 overflow-hidden"
+                              style={{ width: `${fill * 100}%` }}
+                            >
+                              <Star size={14} className="fill-[#093624] text-[#093624]" />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                    <span className="text-[11px] font-bold text-[#093624] ml-1">
+                      {rev.rating.toFixed(1)}
+                    </span>
                   </div>
 
                   <span className="text-gray-400">•</span>
 
                   <span className="font-satoshi-bold text-gray-700">{rev.customerName}</span>
+                  {rev.customerEmail && (
+                    <span className="text-gray-400 text-[11px]">({rev.customerEmail})</span>
+                  )}
 
-                  {/* {rev.isVerified && (
+                  {rev.isVerified && (
                     <span className="inline-flex items-center gap-1 text-[10px] text-[#093624] bg-[#F9F295]/50 px-1.5 py-0.2 rounded-xs font-satoshi-bold">
                       <ShieldCheck size={11} />
-                      Verified In-Hand Delivery
+                      Verified In-Hand
                     </span>
-                  )} */}
+                  )}
 
                   <span className="text-gray-400">•</span>
                   <span className="text-gray-400 text-[11px]">{rev.date}</span>
@@ -123,7 +176,8 @@ export const AdminReviewsTab: React.FC = () => {
             </div>
 
             {/* Right: Moderation Actions */}
-            <div className="flex md:flex-col items-center justify-end gap-2 shrink-0 border-t md:border-t-0 pt-3 md:pt-0">
+            <div className="flex md:flex-col items-center justify-end gap-2 shrink-0 border-t md:border-t-0 pt-3 md:pt-0 min-w-36">
+              {/* Approve Button */}
               {rev.status !== 'approved' && (
                 <button
                   onClick={() => approveReview(rev.id)}
@@ -134,21 +188,43 @@ export const AdminReviewsTab: React.FC = () => {
                 </button>
               )}
 
+              {/* Display Toggle (Hide / Show) */}
+              <button
+                onClick={() => toggleHideReview(rev.id)}
+                className={`w-full px-3 py-1.5 rounded-xs text-xs font-satoshi-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
+                  rev.status === 'hidden'
+                    ? 'bg-[#F9F295] text-[#093624] hover:bg-[#eae385]'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                }`}
+                title={rev.status === 'hidden' ? 'Show on public product page' : 'Hide from public product page'}
+              >
+                {rev.status === 'hidden' ? <Eye size={13} /> : <EyeOff size={13} />}
+                <span>{rev.status === 'hidden' ? 'Show Display' : 'Hide Display'}</span>
+              </button>
+
+              {/* Reject Button */}
               {rev.status !== 'rejected' && (
                 <button
                   onClick={() => rejectReview(rev.id)}
-                  className="w-full px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xs text-xs font-satoshi-bold transition-colors cursor-pointer"
+                  className="w-full px-3 py-1.5 bg-gray-100 hover:bg-red-50 hover:text-red-600 text-gray-700 rounded-xs text-xs font-satoshi-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  Reject
+                  <X size={13} />
+                  <span>Reject</span>
                 </button>
               )}
 
+              {/* Permanent Delete */}
               <button
-                onClick={() => deleteReview(rev.id)}
-                className="p-1.5 text-gray-400 hover:text-[#093624] rounded-xs transition-colors cursor-pointer"
-                title="Delete review"
+                onClick={() => {
+                  if (window.confirm('Are you sure you want to permanently delete this review?')) {
+                    deleteReview(rev.id);
+                  }
+                }}
+                className="w-full p-1.5 text-gray-400 hover:text-red-600 rounded-xs transition-colors cursor-pointer text-xs flex items-center justify-center gap-1"
+                title="Delete review permanently"
               >
-                <Trash2 size={15} />
+                <Trash2 size={13} />
+                <span>Delete</span>
               </button>
             </div>
           </div>

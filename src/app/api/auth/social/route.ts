@@ -119,6 +119,8 @@ export async function POST(request: Request) {
         role: user.role,
         avatar: user.avatar,
         phone: user.phone,
+        gender: (user as any).gender || 'Male',
+        dob: (user as any).dob || '',
         city: user.city,
         authProvider: user.authProvider,
       },

@@ -24,15 +24,17 @@ export async function GET(request: Request) {
           const mapped = dbReviews.map((r) => ({
             id: r.id,
             productId: r.productId,
+            orderId: (r as any).orderId || undefined,
             productName: r.product?.name || 'Fashion Item',
             productImage: r.product?.frontImage || '/assets/img/fashion-1/product/product-1/front-img-1.jpg',
             customerName: r.customerName || r.user?.name || 'Verified Buyer',
             customerAvatar: r.customerAvatar || r.user?.avatar || '/assets/img/others/dashboard-avater.jpg',
+            customerEmail: r.user?.email || undefined,
             rating: r.rating,
             comment: r.comment,
             date: r.createdAt.toISOString().split('T')[0],
             isVerified: r.isVerified,
-            status: (r.status as 'approved' | 'pending' | 'rejected') || 'approved',
+            status: (r.status as 'approved' | 'pending' | 'rejected' | 'hidden') || 'approved',
           }));
           return NextResponse.json({ success: true, reviews: mapped });
         }
@@ -61,7 +63,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { productId, rating, comment, customerName, customerAvatar, isVerified, status } = body;
+    const { productId, orderId, rating, comment, customerName, customerAvatar, customerEmail, isVerified, status } = body;
 
     if (!rating || !comment) {
       return NextResponse.json(
@@ -88,10 +90,18 @@ export async function POST(request: Request) {
           if (first) validProductId = first.id;
         }
 
+        // Try to link user if customerEmail exists
+        let userId: string | null = null;
+        if (customerEmail) {
+          const user = await prisma.user.findUnique({ where: { email: customerEmail } });
+          if (user) userId = user.id;
+        }
+
         if (validProductId) {
           const created = await prisma.review.create({
             data: {
               productId: validProductId,
+              userId: userId || undefined,
               customerName: customerName || 'Verified Buyer',
               customerAvatar: customerAvatar || '/assets/img/others/dashboard-avater.jpg',
               rating: numRating,
@@ -124,15 +134,17 @@ export async function POST(request: Request) {
               review: {
                 id: created.id,
                 productId: created.productId,
+                orderId: orderId || undefined,
                 productName: created.product?.name || body.productName || 'Fashion Item',
                 productImage: created.product?.frontImage || body.productImage || '/assets/img/fashion-1/product/product-1/front-img-1.jpg',
                 customerName: created.customerName,
                 customerAvatar: created.customerAvatar,
+                customerEmail: customerEmail || undefined,
                 rating: created.rating,
                 comment: created.comment,
                 date: created.createdAt.toISOString().split('T')[0],
                 isVerified: created.isVerified,
-                status: created.status as 'approved' | 'pending' | 'rejected',
+                status: created.status as 'approved' | 'pending' | 'rejected' | 'hidden',
               },
               message: 'Review submitted successfully!',
             },
@@ -147,10 +159,12 @@ export async function POST(request: Request) {
     const fallbackReview = {
       id: `REV-${Date.now()}`,
       productId: productId || 'prod-1',
+      orderId: orderId || undefined,
       productName: body.productName || 'Fashion Apparel',
       productImage: body.productImage || '/assets/img/fashion-1/product/product-1/front-img-1.jpg',
       customerName: customerName || 'Verified Buyer',
       customerAvatar: customerAvatar || '/assets/img/others/dashboard-avater.jpg',
+      customerEmail: customerEmail || undefined,
       rating: numRating,
       comment,
       date: new Date().toISOString().split('T')[0],
