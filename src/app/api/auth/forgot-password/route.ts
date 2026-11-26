@@ -41,14 +41,12 @@ export async function POST(request: Request) {
       },
     });
 
-    // Send email using Nodemailer
-    const emailResult = await sendPasswordResetOtpEmail(normalizedEmail, otp, user.name);
+    // Send email using Nodemailer strictly to user's inbox
+    await sendPasswordResetOtpEmail(normalizedEmail, otp, user.name);
 
     return NextResponse.json({
       success: true,
-      message: 'A 6-digit verification code has been sent to your email inbox.',
-      // In dev mode when SMTP credentials are not yet configured, provide devOtp for effortless local testing
-      ...(process.env.NODE_ENV !== 'production' ? { devOtp: otp } : {}),
+      message: 'A 6-digit verification code has been sent strictly to your email inbox.',
     });
   } catch (error: any) {
     console.error('Forgot password error:', error);

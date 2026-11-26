@@ -90,11 +90,9 @@ export async function sendPasswordResetOtpEmail(toEmail: string, otp: string, cu
       text: `Your password reset code is: ${otp}. Valid for 10 minutes.`,
       html: htmlContent,
     });
-    console.log(`[Nodemailer] Password reset email sent to ${toEmail}. MessageId: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
   } catch (err: any) {
-    console.warn(`[Nodemailer] SMTP failed (logging OTP for dev): Code=${otp}`, err.message);
-    // Even if SMTP fails in local dev environment without real credentials, return success so user can use the OTP
-    return { success: true, devOtp: otp };
+    console.error(`[Nodemailer] SMTP send error:`, err.message);
+    throw new Error('Failed to send verification code email. Please verify SMTP settings.');
   }
 }

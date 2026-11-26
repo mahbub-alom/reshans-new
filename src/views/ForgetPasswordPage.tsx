@@ -12,16 +12,17 @@ import {
   Loader2,
   Eye,
   EyeOff,
-  Sparkles,
+  ShieldCheck,
 } from 'lucide-react';
 
 export const ForgetPasswordPage: React.FC = () => {
   const { navigate, showToast } = useShop();
 
   // Step 1: 'request' (enter email)
-  // Step 2: 'verify_reset' (enter OTP and new password)
-  // Step 3: 'success'
-  const [step, setStep] = useState<'request' | 'verify_reset' | 'success'>('request');
+  // Step 2: 'verify_otp' (strictly enter OTP to validate first)
+  // Step 3: 'new_password' (only accessible AFTER OTP is validated)
+  // Step 4: 'success'
+  const [step, setStep] = useState<'request' | 'verify_otp' | 'new_password' | 'success'>('request');
 
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
@@ -33,9 +34,8 @@ export const ForgetPasswordPage: React.FC = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [devOtpHint, setDevOtpHint] = useState<string | null>(null);
 
-  // Step 1: Request Password Reset OTP via Nodemailer
+  // Step 1: Request Password Reset OTP via Nodemailer strictly to email
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
@@ -58,11 +58,8 @@ export const ForgetPasswordPage: React.FC = () => {
         return;
       }
 
-      showToast(data.message || 'Verification code sent to your email!', 'success');
-      if (data.devOtp) {
-        setDevOtpHint(data.devOtp);
-      }
-      setStep('verify_reset');
+      showToast('A 6-digit verification code has been sent strictly to your email!', 'success');
+      setStep('verify_otp');
     } catch (err: any) {
       console.error('Request OTP error:', err);
       setError('Network error. Please try again.');
@@ -71,11 +68,56 @@ export const ForgetPasswordPage: React.FC = () => {
     }
   };
 
-  // Step 2: Submit OTP & Set New Password
+  // Step 2: Validate OTP First (Strict requirement: must validate before opening password step)
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otp.trim()) {
+      setError('Please enter the 6-digit verification code sent to your email.');
+      return;
+    }
+
+    if (otp.trim().length !== 6) {
+      setError('The verification code must be exactly 6 digits.');
+      return;
+    }
+
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          otp: otp.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        const msg = data.error || 'Invalid or expired verification code.';
+        setError(msg);
+        showToast(msg, 'error');
+        return;
+      }
+
+      showToast('Verification code confirmed! Now enter your new password.', 'success');
+      // Transition to password reset step only upon successful validation
+      setStep('new_password');
+    } catch (err: any) {
+      console.error('Verify OTP error:', err);
+      setError('Network error validating code. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Step 3: Set New Password
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!otp.trim() || !newPassword || !confirmPassword) {
-      setError('Please fill in the 6-digit code and your new password.');
+    if (!newPassword || !confirmPassword) {
+      setError('Please fill in your new password and confirmation.');
       return;
     }
 
@@ -137,23 +179,27 @@ export const ForgetPasswordPage: React.FC = () => {
                 />
               </div>
 
-              {/* Right Column: Dynamic Multi-Step Reset Form */}
+              {/* Right Column: Dynamic Step-by-Step Reset Form */}
               <div className="lg:col-span-6 order-1 lg:order-2 p-8 sm:p-12 lg:p-14 flex flex-col justify-center">
                 {/* Header Top Title */}
                 <div className="text-center mb-6">
                   <h3 className="text-2xl sm:text-3xl font-bold font-satoshi-bold text-brand-black mb-1.5 tracking-tight">
                     {step === 'success'
-                      ? 'Password Reset'
-                      : step === 'verify_reset'
-                      ? 'Verify Code & Set Password'
+                      ? 'Password Reset Complete'
+                      : step === 'new_password'
+                      ? 'Create New Password'
+                      : step === 'verify_otp'
+                      ? 'Enter Verification Code'
                       : 'Forgot Password'}
                   </h3>
                   <p className="text-xs sm:text-sm text-brand-body font-satoshi">
                     {step === 'success'
                       ? 'Your account credentials have been securely updated.'
-                      : step === 'verify_reset'
-                      ? `Enter the 6-digit verification code sent to ${email}`
-                      : 'Enter your registered email to receive an instant verification code.'}
+                      : step === 'new_password'
+                      ? 'Verification confirmed! Please set a new strong password.'
+                      : step === 'verify_otp'
+                      ? `We have sent a 6-digit code to ${email}`
+                      : 'Enter your registered email to receive an OTP.'}
                   </p>
                 </div>
 
@@ -161,22 +207,6 @@ export const ForgetPasswordPage: React.FC = () => {
                 {error && (
                   <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-satoshi-bold rounded-xs">
                     {error}
-                  </div>
-                )}
-
-                {/* Dev Mode OTP helper if available */}
-                {devOtpHint && step === 'verify_reset' && (
-                  <div className="mb-4 p-3 bg-[#F9F295]/60 border border-[#093624]/30 text-[#093624] text-xs font-satoshi rounded-xs flex items-center justify-between">
-                    <span>
-                      Dev OTP Code: <strong className="font-mono text-sm tracking-widest">{devOtpHint}</strong>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setOtp(devOtpHint)}
-                      className="text-[11px] underline font-bold cursor-pointer"
-                    >
-                      Fill Code
-                    </button>
                   </div>
                 )}
 
@@ -217,7 +247,7 @@ export const ForgetPasswordPage: React.FC = () => {
                         {isLoading ? (
                           <span className="flex items-center justify-center gap-2">
                             <Loader2 size={16} className="animate-spin" />
-                            Dispatching Email...
+                            Sending to Email...
                           </span>
                         ) : (
                           'Send Verification Code'
@@ -236,14 +266,16 @@ export const ForgetPasswordPage: React.FC = () => {
                   </form>
                 )}
 
-                {/* STEP 2: Verify OTP and Set New Password */}
-                {step === 'verify_reset' && (
-                  <form onSubmit={handleResetPassword} className="space-y-4">
-                    {/* 6-Digit OTP */}
+                {/* STEP 2: Strict OTP Verification First */}
+                {step === 'verify_otp' && (
+                  <form onSubmit={handleVerifyOtp} className="space-y-4">
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-brand-black mb-1.5 font-satoshi-bold">
-                        6-Digit Verification Code <span className="text-[#093624]">*</span>
-                      </label>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-brand-black font-satoshi-bold">
+                          6-Digit Code  <span className="text-[#093624]">*</span>
+                        </label>
+                      
+                      </div>
                       <div className="relative">
                         <input
                           type="text"
@@ -254,14 +286,66 @@ export const ForgetPasswordPage: React.FC = () => {
                             setOtp(e.target.value.replace(/[^0-9]/g, ''));
                             if (error) setError(null);
                           }}
-                          placeholder="123456"
-                          className="w-full h-12 bg-white border border-[#E0DCD9] pl-10 pr-4 text-sm font-mono tracking-widest text-brand-black placeholder:text-gray-400 focus:outline-none focus:border-primary rounded-none"
+                          placeholder="••••••"
+                          autoFocus
+                          className="w-full h-12 bg-white border border-[#E0DCD9] pl-10 pr-4 text-base font-mono tracking-widest text-center text-brand-black placeholder:text-gray-300 focus:outline-none focus:border-primary rounded-none"
                         />
                         <KeyRound
                           size={16}
                           className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
                         />
                       </div>
+                     
+                    </div>
+
+                    <div className="pt-2 text-center space-y-3">
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        size="md"
+                        fullWidth
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <span className="flex items-center justify-center gap-2">
+                            <Loader2 size={16} className="animate-spin" />
+                            Verifying Code...
+                          </span>
+                        ) : (
+                          'Verify Code'
+                        )}
+                      </Button>
+
+                      <div className="flex items-center justify-between text-xs pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStep('request');
+                            setError(null);
+                          }}
+                          className="text-gray-500 hover:text-black cursor-pointer font-satoshi"
+                        >
+                          Change Email
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleRequestOtp}
+                          disabled={isLoading}
+                          className="text-[#093624] font-bold font-satoshi-bold hover:underline cursor-pointer"
+                        >
+                          Resend Code to Email
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                )}
+
+                {/* STEP 3: Set New Password (Only shown after OTP is validated) */}
+                {step === 'new_password' && (
+                  <form onSubmit={handleResetPassword} className="space-y-4">
+                    <div className="p-2.5 bg-green-50 border border-green-200 text-[#093624] text-xs font-satoshi-bold rounded-xs flex items-center gap-2">
+                      <ShieldCheck size={16} />
+                      <span>OTP verified! Set your new password below:</span>
                     </div>
 
                     {/* New Password */}
@@ -337,35 +421,17 @@ export const ForgetPasswordPage: React.FC = () => {
                         {isLoading ? (
                           <span className="flex items-center justify-center gap-2">
                             <Loader2 size={16} className="animate-spin" />
-                            Resetting Password...
+                            Updating Password...
                           </span>
                         ) : (
-                          'Confirm & Reset Password'
+                          'Save New Password'
                         )}
                       </Button>
-
-                      <div className="flex items-center justify-between text-xs pt-1">
-                        <button
-                          type="button"
-                          onClick={() => setStep('request')}
-                          className="text-gray-500 hover:text-black cursor-pointer font-satoshi"
-                        >
-                          Change Email
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleRequestOtp}
-                          disabled={isLoading}
-                          className="text-[#093624] font-bold font-satoshi-bold hover:underline cursor-pointer"
-                        >
-                          Resend Code
-                        </button>
-                      </div>
                     </div>
                   </form>
                 )}
 
-                {/* STEP 3: Success Screen */}
+                {/* STEP 4: Success Screen */}
                 {step === 'success' && (
                   <div className="text-center space-y-5 py-4">
                     <div className="w-14 h-14 bg-[#093624]/10 text-[#093624] rounded-full flex items-center justify-center mx-auto">
