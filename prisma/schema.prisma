@@ -46,6 +46,8 @@ model User {
   city             String?      @default("Dhaka")
   status           String       @default("Active") // Active, Blocked
   passwordResetReq Boolean      @default(false)
+  resetOtp         String?
+  resetOtpExpires  DateTime?
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
@@ -108,7 +110,8 @@ model Address {
   title      String   @default("Home") // Home, Office
   name       String
   street     String   @db.Text
-  city       String   @default("Dhaka")
+  city       String   @default("Dhaka") // District
+  area       String?  @default("Banani") // Thana / Area
   postalCode String?
   phone      String
   isDefault  Boolean  @default(false)

@@ -131,6 +131,10 @@ export const CheckoutPage: React.FC = () => {
     return orderNote || '';
   });
 
+  // Saved addresses from DB
+  const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<string>('custom');
+
   // Payment Method State (bKash or Cash on Delivery)
   const [paymentMethod, setPaymentMethod] = useState<'bKash' | 'Cash on Delivery'>(() => {
     if (typeof window !== 'undefined') {
@@ -139,6 +143,46 @@ export const CheckoutPage: React.FC = () => {
     }
     return 'bKash';
   });
+
+  useEffect(() => {
+    const fetchSavedAddresses = async () => {
+      try {
+        const storedToken = localStorage.getItem('reshans_auth_token');
+        const url = currentUser?.id
+          ? `/api/user/addresses?userId=${encodeURIComponent(currentUser.id)}`
+          : '/api/user/addresses';
+        const res = await fetch(url, {
+          headers: storedToken ? { Authorization: `Bearer ${storedToken}` } : {},
+        });
+        const data = await res.json();
+        if (data.success && Array.isArray(data.addresses) && data.addresses.length > 0) {
+          setSavedAddresses(data.addresses);
+
+          // If customer hasn't manually filled out yet, auto-select default address
+          const defaultAddr = data.addresses.find((a: any) => a.isDefault) || data.addresses[0];
+          if (defaultAddr && !localStorage.getItem('reshans_checkout_address')) {
+            applySavedAddress(defaultAddr);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load saved addresses for checkout:', err);
+      }
+    };
+
+    fetchSavedAddresses();
+  }, [currentUser]);
+
+  const applySavedAddress = (addr: any) => {
+    setSelectedSavedAddressId(addr.id);
+    if (addr.name) setCustomerName(addr.name);
+    if (addr.phone) setCustomerPhone(addr.phone);
+    if (addr.street) setCustomerAddress(addr.street);
+    if (addr.city) {
+      handleDistrictChange(addr.city);
+    }
+    if (addr.area) setArea(addr.area);
+    if (addr.postalCode) setPostalCode(addr.postalCode);
+  };
   const [bkashNumber, setBkashNumber] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('reshans_checkout_bkash_number') || '';
@@ -848,6 +892,76 @@ export const CheckoutPage: React.FC = () => {
                         </p>
                       </div>
                     </div>
+
+                    {/* Saved Addresses Picker (Select from saved or enter new) */}
+                    {savedAddresses.length > 0 && (
+                      <div className="p-4 bg-gray-50 border border-gray-200 rounded-xs space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-xs font-bold uppercase tracking-wider text-[#141414] font-satoshi-bold">
+                            Select Delivery Destination
+                          </label>
+                          <span className="text-[11px] text-[#093624] font-bold font-satoshi-bold">
+                            {savedAddresses.length} saved address{savedAddresses.length > 1 ? 'es' : ''} found
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {savedAddresses.map((addr) => {
+                            const isSelected = selectedSavedAddressId === addr.id;
+                            return (
+                              <button
+                                key={addr.id}
+                                type="button"
+                                onClick={() => applySavedAddress(addr)}
+                                className={`p-3 rounded-xs text-left border transition-all cursor-pointer flex flex-col justify-between ${
+                                  isSelected
+                                    ? 'border-[#093624] bg-white ring-2 ring-[#093624] shadow-xs'
+                                    : 'border-gray-200 bg-white/70 hover:border-gray-300'
+                                }`}
+                              >
+                                <div>
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="font-bold font-satoshi-bold text-xs text-[#141414]">
+                                      {addr.title}
+                                    </span>
+                                    {addr.isDefault && (
+                                      <span className="text-[9px] bg-[#F9F295] text-[#093624] px-1.5 py-0.2 rounded-2xs font-bold">
+                                        Default
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-[11px] text-gray-600 line-clamp-1">{addr.street}</p>
+                                  <p className="text-[10px] text-gray-500">{addr.area}, {addr.city}</p>
+                                </div>
+                                <span className={`text-[10px] font-bold mt-2 ${isSelected ? 'text-[#093624]' : 'text-gray-400'}`}>
+                                  {isSelected ? '✓ Selected Destination' : 'Click to use this'}
+                                </span>
+                              </button>
+                            );
+                          })}
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedSavedAddressId('custom');
+                              setCustomerAddress('');
+                            }}
+                            className={`p-3 rounded-xs text-left border transition-all cursor-pointer flex flex-col justify-center items-center text-center ${
+                              selectedSavedAddressId === 'custom'
+                                ? 'border-[#093624] bg-white ring-2 ring-[#093624] shadow-xs'
+                                : 'border-dashed border-gray-300 bg-white hover:border-gray-400'
+                            }`}
+                          >
+                            <span className="font-bold font-satoshi-bold text-xs text-[#141414]">
+                              + Use Another / New Address
+                            </span>
+                            <span className="text-[10px] text-gray-500 mt-0.5">
+                              Enter a custom delivery address below
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Delivery Zone Selection */}
                     <div className="space-y-2">

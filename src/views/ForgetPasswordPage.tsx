@@ -1,28 +1,135 @@
+'use client';
+
 import React, { useState } from 'react';
 import { useShop } from '../context/ShopContext';
 import { Button } from '../components/common/Button';
-import { ArrowLeft } from 'lucide-react';
+import {
+  ArrowLeft,
+  Mail,
+  KeyRound,
+  Lock,
+  CheckCircle2,
+  Loader2,
+  Eye,
+  EyeOff,
+  Sparkles,
+} from 'lucide-react';
 
 export const ForgetPasswordPage: React.FC = () => {
-  const { navigate } = useShop();
-  const [email, setEmail] = useState('');
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const { navigate, showToast } = useShop();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Step 1: 'request' (enter email)
+  // Step 2: 'verify_reset' (enter OTP and new password)
+  // Step 3: 'success'
+  const [step, setStep] = useState<'request' | 'verify_reset' | 'success'>('request');
+
+  const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [devOtpHint, setDevOtpHint] = useState<string | null>(null);
+
+  // Step 1: Request Password Reset OTP via Nodemailer
+  const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
-    setIsSubmitted(true);
+    if (!email.trim()) return;
+
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        const msg = data.error || 'Failed to dispatch verification code.';
+        setError(msg);
+        showToast(msg, 'error');
+        return;
+      }
+
+      showToast(data.message || 'Verification code sent to your email!', 'success');
+      if (data.devOtp) {
+        setDevOtpHint(data.devOtp);
+      }
+      setStep('verify_reset');
+    } catch (err: any) {
+      console.error('Request OTP error:', err);
+      setError('Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Step 2: Submit OTP & Set New Password
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otp.trim() || !newPassword || !confirmPassword) {
+      setError('Please fill in the 6-digit code and your new password.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('New passwords do not match.');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
+
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          otp: otp.trim(),
+          newPassword,
+          confirmPassword,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        const msg = data.error || 'Password reset failed.';
+        setError(msg);
+        showToast(msg, 'error');
+        return;
+      }
+
+      showToast('Password reset successful! You may now sign in.', 'success');
+      setStep('success');
+    } catch (err: any) {
+      console.error('Reset password error:', err);
+      setError('Network error resetting password. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="bg-white min-h-screen text-[#141414] font-satoshi">
-      {/* Forget Password Area Start matching .aq-login-ptb */}
       <div className="py-16 sm:py-24">
         <div className="max-w-[1240px] mx-auto px-4 sm:px-6">
           <div className="max-w-[1000px] mx-auto bg-white border border-[#EBEBEB] overflow-hidden shadow-sm">
             <div className="grid grid-cols-1 lg:grid-cols-12 items-center">
-              {/* Left Column: Visual Thumb Image (lg:col-span-6 order-2 lg:order-1) */}
-              <div className="lg:col-span-6 order-2 lg:order-1 bg-[#F9F9F9] relative flex items-center justify-center overflow-hidden min-h-[280px] lg:min-h-[520px]">
+              {/* Left Column: Visual Thumb Image */}
+              <div className="lg:col-span-6 order-2 lg:order-1 bg-[#F9F9F9] relative flex items-center justify-center overflow-hidden min-h-[280px] lg:min-h-[560px]">
                 <img
                   src="/assets/img/others/login-thumb-1.jpg"
                   alt="Reshans Fashion Password Recovery"
@@ -30,32 +137,246 @@ export const ForgetPasswordPage: React.FC = () => {
                 />
               </div>
 
-              {/* Right Column: Reset Form Content (lg:col-span-6 order-1 lg:order-2) */}
+              {/* Right Column: Dynamic Multi-Step Reset Form */}
               <div className="lg:col-span-6 order-1 lg:order-2 p-8 sm:p-12 lg:p-14 flex flex-col justify-center">
-                {/* Header Top Title matching .aq-login-top */}
-                <div className="text-center mb-8">
-                  <h3 className="text-2xl sm:text-3xl font-bold font-satoshi-bold text-brand-black mb-2 tracking-tight">
-                    Forgot password
+                {/* Header Top Title */}
+                <div className="text-center mb-6">
+                  <h3 className="text-2xl sm:text-3xl font-bold font-satoshi-bold text-brand-black mb-1.5 tracking-tight">
+                    {step === 'success'
+                      ? 'Password Reset'
+                      : step === 'verify_reset'
+                      ? 'Verify Code & Set Password'
+                      : 'Forgot Password'}
                   </h3>
-                  <p className="text-sm text-brand-body font-satoshi">
-                    No worries, we’ll send you reset instructions.
+                  <p className="text-xs sm:text-sm text-brand-body font-satoshi">
+                    {step === 'success'
+                      ? 'Your account credentials have been securely updated.'
+                      : step === 'verify_reset'
+                      ? `Enter the 6-digit verification code sent to ${email}`
+                      : 'Enter your registered email to receive an instant verification code.'}
                   </p>
                 </div>
 
-                {isSubmitted ? (
+                {/* Error Banner */}
+                {error && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-satoshi-bold rounded-xs">
+                    {error}
+                  </div>
+                )}
+
+                {/* Dev Mode OTP helper if available */}
+                {devOtpHint && step === 'verify_reset' && (
+                  <div className="mb-4 p-3 bg-[#F9F295]/60 border border-[#093624]/30 text-[#093624] text-xs font-satoshi rounded-xs flex items-center justify-between">
+                    <span>
+                      Dev OTP Code: <strong className="font-mono text-sm tracking-widest">{devOtpHint}</strong>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setOtp(devOtpHint)}
+                      className="text-[11px] underline font-bold cursor-pointer"
+                    >
+                      Fill Code
+                    </button>
+                  </div>
+                )}
+
+                {/* STEP 1: Enter Email */}
+                {step === 'request' && (
+                  <form onSubmit={handleRequestOtp} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-brand-black mb-1.5 font-satoshi-bold">
+                        Your Registered Email <span className="text-[#093624]">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="email"
+                          required
+                          value={email}
+                          onChange={(e) => {
+                            setEmail(e.target.value);
+                            if (error) setError(null);
+                          }}
+                          placeholder="email@address.com"
+                          className="w-full h-12 bg-white border border-[#E0DCD9] pl-10 pr-4 text-xs text-brand-black placeholder:text-gray-400 focus:outline-none focus:border-primary transition-colors rounded-none font-satoshi"
+                        />
+                        <Mail
+                          size={16}
+                          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="pt-2 text-center space-y-4">
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        size="md"
+                        fullWidth
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <span className="flex items-center justify-center gap-2">
+                            <Loader2 size={16} className="animate-spin" />
+                            Dispatching Email...
+                          </span>
+                        ) : (
+                          'Send Verification Code'
+                        )}
+                      </Button>
+
+                      <button
+                        type="button"
+                        onClick={() => navigate('/login')}
+                        className="inline-flex items-center justify-center gap-1.5 text-xs font-satoshi-bold text-brand-black hover:text-primary transition-colors cursor-pointer"
+                      >
+                        <ArrowLeft size={14} />
+                        <span>Back to Log in</span>
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* STEP 2: Verify OTP and Set New Password */}
+                {step === 'verify_reset' && (
+                  <form onSubmit={handleResetPassword} className="space-y-4">
+                    {/* 6-Digit OTP */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-brand-black mb-1.5 font-satoshi-bold">
+                        6-Digit Verification Code <span className="text-[#093624]">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          required
+                          maxLength={6}
+                          value={otp}
+                          onChange={(e) => {
+                            setOtp(e.target.value.replace(/[^0-9]/g, ''));
+                            if (error) setError(null);
+                          }}
+                          placeholder="123456"
+                          className="w-full h-12 bg-white border border-[#E0DCD9] pl-10 pr-4 text-sm font-mono tracking-widest text-brand-black placeholder:text-gray-400 focus:outline-none focus:border-primary rounded-none"
+                        />
+                        <KeyRound
+                          size={16}
+                          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* New Password */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-brand-black mb-1.5 font-satoshi-bold">
+                        New Password <span className="text-[#093624]">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          required
+                          value={newPassword}
+                          onChange={(e) => {
+                            setNewPassword(e.target.value);
+                            if (error) setError(null);
+                          }}
+                          placeholder="At least 6 characters"
+                          className="w-full h-12 bg-white border border-[#E0DCD9] pl-10 pr-10 text-xs text-brand-black focus:outline-none focus:border-primary rounded-none"
+                        />
+                        <Lock
+                          size={16}
+                          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary cursor-pointer"
+                        >
+                          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Confirm Password */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-brand-black mb-1.5 font-satoshi-bold">
+                        Confirm New Password <span className="text-[#093624]">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          required
+                          value={confirmPassword}
+                          onChange={(e) => {
+                            setConfirmPassword(e.target.value);
+                            if (error) setError(null);
+                          }}
+                          placeholder="Re-enter new password"
+                          className="w-full h-12 bg-white border border-[#E0DCD9] pl-10 pr-10 text-xs text-brand-black focus:outline-none focus:border-primary rounded-none"
+                        />
+                        <Lock
+                          size={16}
+                          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary cursor-pointer"
+                        >
+                          {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 text-center space-y-3">
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        size="md"
+                        fullWidth
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <span className="flex items-center justify-center gap-2">
+                            <Loader2 size={16} className="animate-spin" />
+                            Resetting Password...
+                          </span>
+                        ) : (
+                          'Confirm & Reset Password'
+                        )}
+                      </Button>
+
+                      <div className="flex items-center justify-between text-xs pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setStep('request')}
+                          className="text-gray-500 hover:text-black cursor-pointer font-satoshi"
+                        >
+                          Change Email
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleRequestOtp}
+                          disabled={isLoading}
+                          className="text-[#093624] font-bold font-satoshi-bold hover:underline cursor-pointer"
+                        >
+                          Resend Code
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                )}
+
+                {/* STEP 3: Success Screen */}
+                {step === 'success' && (
                   <div className="text-center space-y-5 py-4">
-                    <div className="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M22 2L11 13" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M22 2L15 22L11 13L2 9L22 2Z" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
+                    <div className="w-14 h-14 bg-[#093624]/10 text-[#093624] rounded-full flex items-center justify-center mx-auto">
+                      <CheckCircle2 size={32} />
                     </div>
                     <div className="space-y-1">
                       <h4 className="text-base font-bold font-satoshi-bold text-brand-black">
-                        Reset instructions sent!
+                        Password Updated Successfully!
                       </h4>
                       <p className="text-xs text-brand-body font-satoshi">
-                        We sent a secure password reset link to <strong className="text-brand-black font-satoshi-bold">{email}</strong>. Please check your inbox.
+                        You can now sign in to your Reshans account using your new password.
                       </p>
                     </div>
                     <Button
@@ -64,47 +385,9 @@ export const ForgetPasswordPage: React.FC = () => {
                       fullWidth
                       onClick={() => navigate('/login')}
                     >
-                      Back to Log in
+                      Proceed to Log in
                     </Button>
                   </div>
-                ) : (
-                  <form onSubmit={handleSubmit} className="space-y-5">
-                    {/* Email Input */}
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-brand-black mb-2 font-satoshi-bold">
-                        Your Email <span className="text-[#093624]">*</span>
-                      </label>
-                      <input
-                        type="email"
-                        required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="email@address.com"
-                        className="w-full h-12 bg-white border border-[#E0DCD9] px-4 text-sm text-brand-black placeholder:text-gray-400 focus:outline-none focus:border-primary transition-colors rounded-none font-satoshi"
-                      />
-                    </div>
-
-                    {/* Reset Password Button & Back to login link */}
-                    <div className="pt-2 text-center space-y-4">
-                      <Button
-                        type="submit"
-                        variant="primary"
-                        size="md"
-                        fullWidth
-                      >
-                        Reset Password
-                      </Button>
-
-                      <button
-                        type="button"
-                        onClick={() => navigate('/login')}
-                        className="inline-flex items-center justify-center gap-2 text-xs font-satoshi-bold text-brand-black hover:text-primary transition-colors cursor-pointer"
-                      >
-                        <ArrowLeft size={14} />
-                        <span>Back to Log in</span>
-                      </button>
-                    </div>
-                  </form>
                 )}
               </div>
             </div>
